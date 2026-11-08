@@ -1552,7 +1552,6 @@ fun FullScreenLyricsView(
     }
 }
 
-}
 // 11. SYNCHRONIZED LYRICS VIEWER COMPOSABLE
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
