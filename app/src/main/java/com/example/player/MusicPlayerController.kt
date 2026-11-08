@@ -148,11 +148,16 @@ class MusicPlayerController(
         _currentSong.value = song
 
         val mediaItems = playQueue.map { s ->
+            val artworkUri = if (!s.customCoverUri.isNullOrEmpty()) {
+                Uri.parse(s.customCoverUri)
+            } else {
+                com.example.utils.ArtworkCacheManager.getCachedFile(context, s.path)?.let { Uri.fromFile(it) }
+            }
             val metadata = androidx.media3.common.MediaMetadata.Builder()
                 .setTitle(s.title)
                 .setArtist(s.artist)
                 .setAlbumTitle(s.album)
-                .setArtworkUri(if (!s.customCoverUri.isNullOrEmpty()) Uri.parse(s.customCoverUri) else null)
+                .setArtworkUri(artworkUri)
                 .build()
             MediaItem.Builder()
                 .setMediaId(s.id.toString())

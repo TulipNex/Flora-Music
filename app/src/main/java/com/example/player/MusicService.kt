@@ -1,10 +1,14 @@
 package com.example.player
 
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import androidx.core.app.NotificationCompat
@@ -15,13 +19,19 @@ import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import com.example.FloraApplication
+import com.example.MainActivity
+import com.example.domain.model.Song
+import com.example.utils.ArtworkCacheManager
+import com.example.utils.MusicScanner
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
@@ -110,36 +120,150 @@ class MusicService : MediaLibraryService() {
         mediaLibrarySession = MediaLibrarySession.Builder(this, player, callback)
             .setId("FloraMusicService")
             .build()
+
+        // Observe playback state and current song to automatically update rich notification
+        serviceScope.launch {
+            combine(
+                app.playerController.currentSong,
+                app.playerController.isPlaying
+            ) { song, isPlaying ->
+                Pair(song, isPlaying)
+            }.collect { (song, isPlaying) ->
+                updateNotification(song, isPlaying)
+            }
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        ensureForegroundNotification()
+        val app = application as FloraApplication
+        when (intent?.action) {
+            ACTION_PLAY_PAUSE -> {
+                app.playerController.togglePlay()
+            }
+            ACTION_NEXT -> {
+                app.playerController.next()
+            }
+            ACTION_PREVIOUS -> {
+                app.playerController.previous()
+            }
+            ACTION_STOP -> {
+                if (app.playerController.isPlaying.value) {
+                    app.playerController.togglePlay()
+                }
+                stopForeground(STOP_FOREGROUND_REMOVE)
+                stopSelf()
+                return START_NOT_STICKY
+            }
+        }
+
+        val currentSong = app.playerController.currentSong.value
+        val isPlaying = app.playerController.isPlaying.value
+        updateNotification(currentSong, isPlaying)
+
         return super.onStartCommand(intent, flags, startId)
     }
 
-    private fun ensureForegroundNotification() {
+    private fun updateNotification(song: Song?, isPlaying: Boolean) {
         try {
-            createNotificationChannel()
-            val currentSong = (application as? FloraApplication)?.playerController?.currentSong?.value
-            val title = currentSong?.title ?: "Flora Music"
-            val artist = currentSong?.artist ?: "Pemutar Musik"
-
-            val notification = NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_media_play)
-                .setContentTitle(title)
-                .setContentText(artist)
-                .setPriority(NotificationCompat.PRIORITY_LOW)
-                .setOngoing(true)
-                .setCategory(NotificationCompat.CATEGORY_SERVICE)
-                .build()
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            val notification = buildMediaNotification(song, isPlaying)
+            if (isPlaying) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+                } else {
+                    startForeground(NOTIFICATION_ID, notification)
+                }
             } else {
-                startForeground(NOTIFICATION_ID, notification)
+                val notificationManager = getSystemService(NotificationManager::class.java)
+                notificationManager?.notify(NOTIFICATION_ID, notification)
             }
         } catch (e: Exception) {
-            android.util.Log.e("MusicService", "Failed to start foreground notification immediately", e)
+            android.util.Log.e("MusicService", "Error updating notification", e)
+        }
+    }
+
+    private fun buildMediaNotification(song: Song?, isPlaying: Boolean): Notification {
+        createNotificationChannel()
+
+        val title = song?.title ?: "Flora Music"
+        val artist = song?.artist ?: "Pemutar Musik"
+        val album = song?.album ?: ""
+
+        val prevIntent = createPendingIntent(ACTION_PREVIOUS, 1)
+        val playPauseIntent = createPendingIntent(ACTION_PLAY_PAUSE, 2)
+        val nextIntent = createPendingIntent(ACTION_NEXT, 3)
+        val stopIntent = createPendingIntent(ACTION_STOP, 4)
+
+        val contentIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val artworkBitmap = loadArtworkBitmap(song)
+
+        val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
+            .setShowActionsInCompactView(0, 1, 2)
+            .setShowCancelButton(true)
+            .setCancelButtonIntent(stopIntent)
+
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(if (isPlaying) com.example.R.drawable.ic_play_arrow else com.example.R.drawable.ic_pause)
+            .setContentTitle(title)
+            .setContentText(artist)
+            .setSubText(album.ifEmpty { null })
+            .setLargeIcon(artworkBitmap)
+            .setContentIntent(contentIntent)
+            .setStyle(mediaStyle)
+            .setOngoing(isPlaying)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .addAction(com.example.R.drawable.ic_skip_previous, "Previous", prevIntent)
+            .addAction(
+                if (isPlaying) com.example.R.drawable.ic_pause else com.example.R.drawable.ic_play_arrow,
+                if (isPlaying) "Pause" else "Play",
+                playPauseIntent
+            )
+            .addAction(com.example.R.drawable.ic_skip_next, "Next", nextIntent)
+
+        return builder.build()
+    }
+
+    private fun loadArtworkBitmap(song: Song?): Bitmap? {
+        if (song == null) return null
+        return try {
+            if (!song.customCoverUri.isNullOrEmpty()) {
+                val uri = Uri.parse(song.customCoverUri)
+                contentResolver.openInputStream(uri)?.use { stream ->
+                    BitmapFactory.decodeStream(stream)
+                }
+            } else {
+                val cachedFile = ArtworkCacheManager.getCachedFile(this, song.path)
+                if (cachedFile != null && cachedFile.exists()) {
+                    BitmapFactory.decodeFile(cachedFile.absolutePath)
+                } else {
+                    val bytes = MusicScanner.getArtworkBytes(song.path)
+                    if (bytes != null) {
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    } else null
+                }
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun createPendingIntent(action: String, requestCode: Int): PendingIntent {
+        val intent = Intent(this, MusicService::class.java).apply {
+            this.action = action
+        }
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            PendingIntent.getForegroundService(this, requestCode, intent, flags)
+        } else {
+            PendingIntent.getService(this, requestCode, intent, flags)
         }
     }
 
@@ -150,7 +274,7 @@ class MusicService : MediaLibraryService() {
                 "Flora Music Playback",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Media playback notification"
+                description = "Media playback controls and notifications"
                 setShowBadge(false)
             }
             val manager = getSystemService(NotificationManager::class.java)
@@ -209,5 +333,10 @@ class MusicService : MediaLibraryService() {
     companion object {
         const val CHANNEL_ID = "flora_playback_channel"
         const val NOTIFICATION_ID = 1001
+
+        const val ACTION_PLAY_PAUSE = "com.example.flora.PLAY_PAUSE"
+        const val ACTION_NEXT = "com.example.flora.NEXT"
+        const val ACTION_PREVIOUS = "com.example.flora.PREVIOUS"
+        const val ACTION_STOP = "com.example.flora.STOP"
     }
 }
