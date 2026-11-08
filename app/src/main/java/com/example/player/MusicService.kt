@@ -1,23 +1,29 @@
 package com.example.player
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.net.Uri
+import android.os.Build
+import androidx.core.app.NotificationCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.session.DefaultMediaNotificationProvider
+import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import androidx.media3.session.LibraryResult
 import com.example.FloraApplication
-import com.example.domain.model.Song
+import com.google.common.collect.ImmutableList
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.firstOrNull
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import com.google.common.util.concurrent.ListenableFuture
-import com.google.common.util.concurrent.Futures
-import com.google.common.collect.ImmutableList
-import android.net.Uri
+import java.io.File
 
 class MusicService : MediaLibraryService() {
     private var mediaLibrarySession: MediaLibrarySession? = null
@@ -26,8 +32,16 @@ class MusicService : MediaLibraryService() {
 
     override fun onCreate() {
         super.onCreate()
+        createNotificationChannel()
+
         val app = application as FloraApplication
         val player = app.playerController.player
+
+        val notificationProvider = DefaultMediaNotificationProvider.Builder(this)
+            .setChannelId(CHANNEL_ID)
+            .setNotificationId(NOTIFICATION_ID)
+            .build()
+        setMediaNotificationProvider(notificationProvider)
 
         val callback = object : MediaLibrarySession.Callback {
             override fun onAddMediaItems(
@@ -36,7 +50,6 @@ class MusicService : MediaLibraryService() {
                 mediaItems: MutableList<MediaItem>
             ): ListenableFuture<MutableList<MediaItem>> {
                 val updatedMediaItems = mutableListOf<MediaItem>()
-                
                 for (item in mediaItems) {
                     val query = item.requestMetadata.searchQuery
                     if (query != null) {
@@ -48,15 +61,17 @@ class MusicService : MediaLibraryService() {
                 }
                 return Futures.immediateFuture(updatedMediaItems)
             }
-            
+
             override fun onGetLibraryRoot(
                 session: MediaLibrarySession,
                 browser: MediaSession.ControllerInfo,
                 params: LibraryParams?
             ): ListenableFuture<LibraryResult<MediaItem>> {
-                return Futures.immediateFuture(LibraryResult.ofItem(
-                    MediaItem.Builder().setMediaId("root").build(), params
-                ))
+                return Futures.immediateFuture(
+                    LibraryResult.ofItem(
+                        MediaItem.Builder().setMediaId("root").build(), params
+                    )
+                )
             }
 
             override fun onGetChildren(
@@ -96,7 +111,53 @@ class MusicService : MediaLibraryService() {
             .setId("FloraMusicService")
             .build()
     }
-    
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        ensureForegroundNotification()
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    private fun ensureForegroundNotification() {
+        try {
+            createNotificationChannel()
+            val currentSong = (application as? FloraApplication)?.playerController?.currentSong?.value
+            val title = currentSong?.title ?: "Flora Music"
+            val artist = currentSong?.artist ?: "Pemutar Musik"
+
+            val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_media_play)
+                .setContentTitle(title)
+                .setContentText(artist)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOngoing(true)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .build()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MusicService", "Failed to start foreground notification immediately", e)
+        }
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Flora Music Playback",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Media playback notification"
+                setShowBadge(false)
+            }
+            val manager = getSystemService(NotificationManager::class.java)
+            manager?.createNotificationChannel(channel)
+        }
+    }
+
     private fun handleSearchBlocking(query: String): List<MediaItem> {
         return runBlocking {
             val app = application as FloraApplication
@@ -109,12 +170,11 @@ class MusicService : MediaLibraryService() {
                 it.artist.contains(query, ignoreCase = true) ||
                 it.album.contains(query, ignoreCase = true)
             }
-            
+
             val targetSongs = if (matchedSongs.isNotEmpty()) matchedSongs else listOf(songs.first())
-            
-            // Sync with our controller's state
+
             app.playerController.syncQueueFromExternal(targetSongs, 0)
-            
+
             targetSongs.map { s ->
                 val metadata = MediaMetadata.Builder()
                     .setTitle(s.title)
@@ -125,7 +185,7 @@ class MusicService : MediaLibraryService() {
                     .build()
                 MediaItem.Builder()
                     .setMediaId(s.id.toString())
-                    .setUri(Uri.fromFile(java.io.File(s.path)))
+                    .setUri(Uri.fromFile(File(s.path)))
                     .setMediaMetadata(metadata)
                     .build()
             }
@@ -144,5 +204,10 @@ class MusicService : MediaLibraryService() {
         }
         serviceJob.cancel()
         super.onDestroy()
+    }
+
+    companion object {
+        const val CHANNEL_ID = "flora_playback_channel"
+        const val NOTIFICATION_ID = 1001
     }
 }

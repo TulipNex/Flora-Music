@@ -274,7 +274,11 @@ class MusicPlayerController(
         try {
             val intent = Intent(context, MusicService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
+                try {
+                    context.startForegroundService(intent)
+                } catch (e: Exception) {
+                    context.startService(intent)
+                }
             } else {
                 context.startService(intent)
             }
