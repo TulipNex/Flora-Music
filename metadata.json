@@ -1,0 +1,6 @@
+{
+  "name": "Flora",
+  "description": "Flora is a modern offline music player with a premium Material 3 design, local audio scanning, and a synchronized lyrics system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
