@@ -89,6 +89,11 @@ class MusicPlayerController(
                 }
             }
 
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                Log.e(tag, "ExoPlayer playback error: ${error.errorCodeName}", error)
+                _isPlaying.value = false
+            }
+
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_READY) {
                     _duration.value = exoPlayer.duration.coerceAtLeast(0L)
@@ -184,6 +189,12 @@ class MusicPlayerController(
         if (exoPlayer.isPlaying) {
             exoPlayer.pause()
         } else {
+            val song = _currentSong.value
+            val q = _queue.value
+            if (exoPlayer.mediaItemCount == 0 && song != null && q.isNotEmpty()) {
+                play(song, q)
+                return
+            }
             if (exoPlayer.playbackState == Player.STATE_IDLE) {
                 exoPlayer.prepare()
             }

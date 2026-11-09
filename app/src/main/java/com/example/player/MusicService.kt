@@ -188,15 +188,18 @@ class MusicService : MediaLibraryService() {
     private fun updateNotification(song: Song?, isPlaying: Boolean) {
         try {
             val notification = buildMediaNotification(song, isPlaying)
-            if (isPlaying) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-                } else {
-                    startForeground(NOTIFICATION_ID, notification)
-                }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
             } else {
-                val notificationManager = getSystemService(NotificationManager::class.java)
-                notificationManager?.notify(NOTIFICATION_ID, notification)
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            if (!isPlaying) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    stopForeground(STOP_FOREGROUND_DETACH)
+                } else {
+                    @Suppress("DEPRECATION")
+                    stopForeground(false)
+                }
             }
         } catch (e: Exception) {
             android.util.Log.e("MusicService", "Error updating notification", e)
@@ -395,9 +398,17 @@ class MusicService : MediaLibraryService() {
         return mediaLibrarySession
     }
 
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        val app = application as? FloraApplication
+        val isPlaying = app?.playerController?.isPlaying?.value == true
+        if (!isPlaying) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
+    }
+
     override fun onDestroy() {
         mediaLibrarySession?.run {
-            player.release()
             release()
             mediaLibrarySession = null
         }
