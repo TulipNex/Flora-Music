@@ -1937,6 +1937,7 @@ fun SongMetadataEditScreen(
     var year by remember { mutableStateOf(if (song.year > 0) song.year.toString() else "") }
     var comment by remember { mutableStateOf(song.comment) }
     var customCoverUri by remember { mutableStateOf<Uri?>(song.customCoverUri?.let { Uri.parse(it) }) }
+    var showLyricsEditor by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
@@ -2249,50 +2250,68 @@ fun SongMetadataEditScreen(
                         ),
                         singleLine = true, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                     )
-                    val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
-                    val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
-                    
-                    OutlinedTextField(
-                        value = lyrics,
-                        onValueChange = { lyrics = it },
-                        label = { Text("Lirik Tertanam") },
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 13.sp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = EmeraldGreen, unfocusedBorderColor = DividerSlate,
-                            focusedLabelColor = EmeraldGreen, unfocusedLabelColor = TextSecondary
-                        ),
-                        minLines = 4, 
+                    // Embedded Lyrics Section with Musicolet-style Entry Button
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .focusRequester(focusRequester)
-                            .testTag("lyrics-editor-container")
-                    )
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-                        horizontalArrangement = Arrangement.End
+                            .padding(vertical = 8.dp)
                     ) {
-                        IconButton(onClick = { focusRequester.requestFocus() }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit", tint = Color.White)
-                        }
-                        IconButton(onClick = { 
-                            lyrics = lyrics.copy(selection = androidx.compose.ui.text.TextRange(0, lyrics.text.length))
-                        }) {
-                            Icon(Icons.Default.SelectAll, contentDescription = "Pilih Semua", tint = Color.White)
-                        }
-                        IconButton(onClick = {
-                            val clipText = clipboardManager.getText()?.text ?: ""
-                            val text = lyrics.text
-                            val selection = lyrics.selection
-                            val newText = text.substring(0, selection.start) + clipText + text.substring(selection.end)
-                            val newCursorIndex = selection.start + clipText.length
-                            lyrics = lyrics.copy(
-                                text = newText,
-                                selection = androidx.compose.ui.text.TextRange(newCursorIndex)
-                            )
-                        }) {
-                            Icon(Icons.Default.ContentPaste, contentDescription = "Tempel", tint = Color.White)
+                        Text(
+                            text = "Lirik Tertanam",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = EmeraldLight
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showLyricsEditor = true },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = CardSlate)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(EmeraldGreen.copy(alpha = 0.15f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.MusicNote,
+                                        contentDescription = null,
+                                        tint = EmeraldGreen,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "UBAH LIRIK TERTANAM",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = if (lyrics.text.isBlank()) "Belum ada lirik tertanam (Ketuk untuk menambah)"
+                                               else "${lyrics.text.lines().count { it.isNotBlank() }} baris lirik (Ketuk untuk mengedit)",
+                                        fontSize = 11.sp,
+                                        color = TextSecondary
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
 
@@ -2301,6 +2320,18 @@ fun SongMetadataEditScreen(
                     MetaRow("Lokasi File", song.path)
                     MetaRow("Jumlah Diputar", "${song.playCount} kali")
                 }
+        }
+
+        if (showLyricsEditor) {
+            FloraLyricsEditorDialog(
+                initialLyrics = lyrics.text,
+                viewModel = viewModel,
+                onSave = { updatedLyrics ->
+                    lyrics = androidx.compose.ui.text.input.TextFieldValue(updatedLyrics)
+                    showLyricsEditor = false
+                },
+                onDismiss = { showLyricsEditor = false }
+            )
         }
     }
 }
