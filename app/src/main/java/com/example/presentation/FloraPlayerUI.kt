@@ -1317,7 +1317,7 @@ fun FullScreenLyricsView(
                                     fontWeight = FontWeight.Medium,
                                     lineHeight = 32.sp,
                                     textAlign = align,
-                                    modifier = Modifier.padding(horizontal = lyricsMargin.dp)
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = lyricsMargin.dp)
                                 )
                             }
                         }
@@ -1505,7 +1505,7 @@ fun FullScreenLyricsView(
                                                 isAutoScrollLocked = true
                                                 onSeekTo(line.timestampMs)
                                             }) {
-                                                val displayText = if (line.isBackground) line.text.replace(Regex("^\\s*\\(|\\)\\s*$"), "").trim() else line.text
+                                                val displayText = if (line.isBackground) line.text.replace(Regex("^\\s*\\(|\\)\\s*$"), "").trim() else line.text.trim()
                                                 if (line.words.isNotEmpty()) {
                                                     FloraWordLevelLyrics(
                                                         mainText = displayText,
@@ -1720,7 +1720,7 @@ fun SynchronizedLyricsLayout(
                         fontWeight = FontWeight.Medium,
                         lineHeight = 28.sp,
                         textAlign = align,
-                        modifier = Modifier.padding(horizontal = lyricsMargin.dp)
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = lyricsMargin.dp)
                     )
                 }
             }
@@ -1898,7 +1898,7 @@ fun SynchronizedLyricsLayout(
                                         isAutoScrollLocked = true
                                         onSeekTo(line.timestampMs)
                                     }) {
-                                        val displayText = if (line.isBackground) line.text.replace(Regex("^\\s*\\(|\\)\\s*$"), "").trim() else line.text
+                                        val displayText = if (line.isBackground) line.text.replace(Regex("^\\s*\\(|\\)\\s*$"), "").trim() else line.text.trim()
                                         if (line.words.isNotEmpty()) {
                                             FloraWordLevelLyrics(
                                                 mainText = displayText,
@@ -2836,12 +2836,14 @@ fun FloraWordLevelLyrics(
 
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val maxWidthPx = constraints.maxWidth
-        val layoutResult = remember(mainText, maxWidthPx, lyricStyle) {
-            val safeWidth = if (maxWidthPx == Constraints.Infinity || maxWidthPx <= 0) 10000 else maxWidthPx
+        val safeWidth = if (maxWidthPx == Constraints.Infinity || maxWidthPx <= 0) 10000 else maxWidthPx
+        val minWidth = if (maxWidthPx == Constraints.Infinity || maxWidthPx <= 0) 0 else safeWidth
+        val effectiveStyle = lyricStyle.copy(textAlign = alignment)
+        val layoutResult = remember(mainText, safeWidth, minWidth, effectiveStyle) {
             textMeasurer.measure(
                 text = mainText,
-                style = lyricStyle,
-                constraints = Constraints(maxWidth = safeWidth),
+                style = effectiveStyle,
+                constraints = Constraints(minWidth = minWidth, maxWidth = safeWidth),
                 softWrap = true
             )
         }
