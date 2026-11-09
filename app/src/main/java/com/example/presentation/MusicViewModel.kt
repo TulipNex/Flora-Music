@@ -645,7 +645,7 @@ class MusicViewModel(
     fun deleteSong(song: Song) {
         viewModelScope.launch(Dispatchers.IO) {
             if (playerController.currentSong.value?.id == song.id) {
-                playerController.skipToNext()
+                playerController.next()
             }
             repository.deleteSong(song, getApplication())
         }
