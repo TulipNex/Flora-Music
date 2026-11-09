@@ -26,8 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
-import com.example.music.MusicViewModel
-import com.example.music.TabConfig
 import com.example.ui.theme.CardSlate
 import com.example.ui.theme.EmeraldGreen
 import com.example.ui.theme.TextSecondary
@@ -188,8 +186,7 @@ fun TabSettingsScreen(
         if (missing.isNotEmpty()) {
             false
         } else {
-            viewModel.saveTabConfigs(newConfigs)
-            viewModel.saveHiddenModules(currentHidden)
+            viewModel.saveTabConfigs(newConfigs, currentHidden)
             true
         }
     }
