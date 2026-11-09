@@ -3,6 +3,7 @@ package com.example.presentation
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -779,6 +780,36 @@ fun TabSettingsScreen(
                     val icon = getTabIcon(item.name, customTabIcons[item.name])
                     val isFixed = item.name in listOf("Lagu", "Artis", "Album", "Beranda")
 
+                    val handleDragEnd = {
+                        val fromIdx = allItems.indexOfFirst { it.id == item.id }
+                        if (fromIdx != -1) {
+                            val offsetSlots = (dragOffset / itemHeightPx).roundToInt()
+                            val toIdx = (fromIdx + offsetSlots).coerceIn(0, allItems.lastIndex)
+                            if (toIdx != fromIdx) {
+                                val moved = allItems.removeAt(fromIdx)
+                                val headerIdx = allItems.indexOfFirst { it.role == TabRole.HEADER }
+                                val finalTarget = toIdx.coerceIn(0, allItems.size)
+
+                                if (headerIdx != -1) {
+                                    if (finalTarget <= headerIdx) {
+                                        if (moved.role == TabRole.HIDDEN) {
+                                            allItems.add(finalTarget, moved.copy(role = TabRole.SUB))
+                                        } else {
+                                            allItems.add(finalTarget, moved)
+                                        }
+                                    } else {
+                                        allItems.add(finalTarget, moved.copy(role = TabRole.HIDDEN))
+                                    }
+                                } else {
+                                    allItems.add(finalTarget, moved)
+                                }
+                                validateAndSaveFn()
+                            }
+                        }
+                        draggedItemId = null
+                        dragOffset = 0f
+                    }
+
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -804,35 +835,7 @@ fun TabSettingsScreen(
                                                 change.consume()
                                                 dragOffset += dragAmount.y
                                             },
-                                            onDragEnd = {
-                                                val fromIdx = allItems.indexOfFirst { it.id == item.id }
-                                                if (fromIdx != -1) {
-                                                    val offsetSlots = (dragOffset / itemHeightPx).roundToInt()
-                                                    val toIdx = (fromIdx + offsetSlots).coerceIn(0, allItems.lastIndex)
-                                                    if (toIdx != fromIdx) {
-                                                        val moved = allItems.removeAt(fromIdx)
-                                                        val headerIdx = allItems.indexOfFirst { it.role == TabRole.HEADER }
-                                                        val finalTarget = toIdx.coerceIn(0, allItems.size)
-
-                                                        if (headerIdx != -1) {
-                                                            if (finalTarget <= headerIdx) {
-                                                                if (moved.role == TabRole.HIDDEN) {
-                                                                    allItems.add(finalTarget, moved.copy(role = TabRole.SUB))
-                                                                } else {
-                                                                    allItems.add(finalTarget, moved)
-                                                                }
-                                                            } else {
-                                                                allItems.add(finalTarget, moved.copy(role = TabRole.HIDDEN))
-                                                            }
-                                                        } else {
-                                                            allItems.add(finalTarget, moved)
-                                                        }
-                                                        validateAndSaveFn()
-                                                    }
-                                                }
-                                                draggedItemId = null
-                                                dragOffset = 0f
-                                            },
+                                            onDragEnd = handleDragEnd,
                                             onDragCancel = {
                                                 draggedItemId = null
                                                 dragOffset = 0f
@@ -857,8 +860,31 @@ fun TabSettingsScreen(
                                     .padding(horizontal = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.DragHandle, contentDescription = "Geser", tint = TextSecondary)
-                                Spacer(modifier = Modifier.width(10.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .pointerInput(item.id) {
+                                            detectDragGestures(
+                                                onDragStart = {
+                                                    draggedItemId = item.id
+                                                    dragOffset = 0f
+                                                },
+                                                onDrag = { change, dragAmount ->
+                                                    change.consume()
+                                                    dragOffset += dragAmount.y
+                                                },
+                                                onDragEnd = handleDragEnd,
+                                                onDragCancel = {
+                                                    draggedItemId = null
+                                                    dragOffset = 0f
+                                                }
+                                            )
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.DragHandle, contentDescription = "Geser", tint = TextSecondary)
+                                }
+                                Spacer(modifier = Modifier.width(6.dp))
 
                                 if (item.role == TabRole.SUB) {
                                     Spacer(modifier = Modifier.width(16.dp))
