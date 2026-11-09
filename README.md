@@ -2,8 +2,6 @@
 
 <div align="center">
 
-![Flora Music Banner](https://raw.githubusercontent.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6)
-
 **A modern, feature-packed local music player for Android built with Jetpack Compose & Material 3.**  
 Designed for music lovers and power users — featuring word-level synchronized lyrics, physical ID3 tag editing, dynamic palette theming, and a fully modular navigation system.
 
