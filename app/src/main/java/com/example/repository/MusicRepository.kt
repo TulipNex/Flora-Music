@@ -161,4 +161,22 @@ class MusicRepository(
     }
 
     fun getSongsInPlaylist(playlistId: Long): Flow<List<Song>> = playlistDao.getSongsInPlaylist(playlistId)
+
+    suspend fun deleteSong(song: Song, context: Context) {
+        try {
+            val file = java.io.File(song.path)
+            if (file.exists()) {
+                file.delete()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        try {
+            val uri = android.content.ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
+            context.contentResolver.delete(uri, null, null)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        songDao.deleteSongsById(listOf(song.id))
+    }
 }

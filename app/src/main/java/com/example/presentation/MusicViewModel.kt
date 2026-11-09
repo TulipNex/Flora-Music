@@ -500,7 +500,11 @@ class MusicViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val recentlyAdded: StateFlow<List<Song>> = allSongs.map { songs ->
-        songs.sortedByDescending { it.dateAdded }
+        val oneWeekAgoSeconds = (System.currentTimeMillis() / 1000) - (7 * 24 * 60 * 60)
+        songs.filter {
+            val songSeconds = if (it.dateAdded > 10_000_000_000L) it.dateAdded / 1000 else it.dateAdded
+            songSeconds >= oneWeekAgoSeconds
+        }.sortedByDescending { it.dateAdded }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allPlaylists: StateFlow<List<Playlist>> = repository.allPlaylists
@@ -635,6 +639,15 @@ class MusicViewModel(
     fun clearLibrary() {
         viewModelScope.launch {
             repository.clearLibrary()
+        }
+    }
+
+    fun deleteSong(song: Song) {
+        viewModelScope.launch(Dispatchers.IO) {
+            if (playerController.currentSong.value?.id == song.id) {
+                playerController.skipToNext()
+            }
+            repository.deleteSong(song, getApplication())
         }
     }
 

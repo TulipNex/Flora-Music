@@ -1,11 +1,14 @@
 package com.example.presentation
 
 import android.Manifest
+import android.content.ContentUris
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.graphics.Bitmap
 import android.os.Build
+import android.provider.MediaStore
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -78,7 +81,11 @@ import androidx.compose.material3.LocalUseFallbackRippleImplementation
 
 import androidx.compose.foundation.LocalIndication
 
-fun Modifier.bounceClick(onClick: () -> Unit) = composed {
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.bounceClick(
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null
+) = composed {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     
@@ -96,10 +103,11 @@ fun Modifier.bounceClick(onClick: () -> Unit) = composed {
             scaleX = scale
             scaleY = scale
         }
-        .clickable(
+        .combinedClickable(
             interactionSource = interactionSource,
             indication = LocalIndication.current,
-            onClick = onClick
+            onClick = onClick,
+            onLongClick = onLongClick
         )
 }
 
@@ -794,6 +802,9 @@ fun HomeScreen(
     var showSortMenu by remember { mutableStateOf(false) }
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
+    var selectedSongForOptions by remember { mutableStateOf<Song?>(null) }
+    var selectedSongForDetails by remember { mutableStateOf<Song?>(null) }
+    var songToDelete by remember { mutableStateOf<Song?>(null) }
 
     // Aggregate album and artists dynamically from database
     val uniqueAlbumsWithSong = remember(allSongs) {
@@ -1081,7 +1092,8 @@ fun HomeScreen(
                                 Box(modifier = Modifier.weight(1f)) {
                                     RecentSongCard(
                                         song = song,
-                                        onClick = { onSongClick(song, sortedSongs) }
+                                        onClick = { onSongClick(song, sortedSongs) },
+                                        onLongClick = { selectedSongForOptions = song }
                                     )
                                 }
                             }
@@ -1096,7 +1108,7 @@ fun HomeScreen(
                             song = song,
                             isCurrent = false,
                             onClick = { onSongClick(song, sortedSongs) },
-                            onAddToPlaylist = { onAddToPlaylist(song) }
+                            onOptionClick = { selectedSongForOptions = song }
                         )
                     }
                 }
@@ -1248,13 +1260,13 @@ fun HomeScreen(
                     val chunkedFavs = favorites.chunked(columnsCount)
                     items(chunkedFavs, key = { row -> "fav_main_" + row.joinToString("-") { it.id.toString() } }) { rowFavs ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            rowFavs.forEach { song -> Box(modifier = Modifier.weight(1f)) { RecentSongCard(song = song, onClick = { onSongClick(song, favorites) }) } }
+                            rowFavs.forEach { song -> Box(modifier = Modifier.weight(1f)) { RecentSongCard(song = song, onClick = { onSongClick(song, favorites) }, onLongClick = { selectedSongForOptions = song }) } }
                             repeat(columnsCount - rowFavs.size) { Spacer(modifier = Modifier.weight(1f)) }
                         }
                     }
                 } else {
                     items(favorites, key = { "fav_main_list_" + it.id }) { song ->
-                        HomeSongListRowItem(song = song, isCurrent = false, onClick = { onSongClick(song, favorites) }, onAddToPlaylist = { onAddToPlaylist(song) })
+                        HomeSongListRowItem(song = song, isCurrent = false, onClick = { onSongClick(song, favorites) }, onOptionClick = { selectedSongForOptions = song })
                     }
                 }
             }
@@ -1279,13 +1291,13 @@ fun HomeScreen(
                     val chunked = recentlyPlayed.chunked(columnsCount)
                     items(chunked, key = { row -> "hist_main_" + row.joinToString("-") { it.id.toString() } }) { rowSongs ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            rowSongs.forEach { song -> Box(modifier = Modifier.weight(1f)) { RecentSongCard(song = song, onClick = { onSongClick(song, recentlyPlayed) }) } }
+                            rowSongs.forEach { song -> Box(modifier = Modifier.weight(1f)) { RecentSongCard(song = song, onClick = { onSongClick(song, recentlyPlayed) }, onLongClick = { selectedSongForOptions = song }) } }
                             repeat(columnsCount - rowSongs.size) { Spacer(modifier = Modifier.weight(1f)) }
                         }
                     }
                 } else {
                     items(recentlyPlayed, key = { "hist_main_list_" + it.id }) { song ->
-                        HomeSongListRowItem(song = song, isCurrent = false, onClick = { onSongClick(song, recentlyPlayed) }, onAddToPlaylist = { onAddToPlaylist(song) })
+                        HomeSongListRowItem(song = song, isCurrent = false, onClick = { onSongClick(song, recentlyPlayed) }, onOptionClick = { selectedSongForOptions = song })
                     }
                 }
             }
@@ -1310,13 +1322,13 @@ fun HomeScreen(
                     val chunked = mostPlayed.chunked(columnsCount)
                     items(chunked, key = { row -> "top_main_" + row.joinToString("-") { it.id.toString() } }) { rowSongs ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            rowSongs.forEach { song -> Box(modifier = Modifier.weight(1f)) { RecentSongCard(song = song, onClick = { onSongClick(song, mostPlayed) }) } }
+                            rowSongs.forEach { song -> Box(modifier = Modifier.weight(1f)) { RecentSongCard(song = song, onClick = { onSongClick(song, mostPlayed) }, onLongClick = { selectedSongForOptions = song }) } }
                             repeat(columnsCount - rowSongs.size) { Spacer(modifier = Modifier.weight(1f)) }
                         }
                     }
                 } else {
                     items(mostPlayed, key = { "top_main_list_" + it.id }) { song ->
-                        HomeSongListRowItem(song = song, isCurrent = false, onClick = { onSongClick(song, mostPlayed) }, onAddToPlaylist = { onAddToPlaylist(song) })
+                        HomeSongListRowItem(song = song, isCurrent = false, onClick = { onSongClick(song, mostPlayed) }, onOptionClick = { selectedSongForOptions = song })
                     }
                 }
             }
@@ -1333,7 +1345,7 @@ fun HomeScreen(
             if (recentlyAdded.isEmpty()) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().height(150.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                        Text("Belum ada lagu terbaru.", color = TextSecondary, fontSize = 13.sp)
+                        Text("Belum ada lagu baru dalam 1 minggu terakhir.", color = TextSecondary, fontSize = 13.sp)
                     }
                 }
             } else {
@@ -1341,13 +1353,13 @@ fun HomeScreen(
                     val chunked = recentlyAdded.chunked(columnsCount)
                     items(chunked, key = { row -> "new_main_" + row.joinToString("-") { it.id.toString() } }) { rowSongs ->
                         Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            rowSongs.forEach { song -> Box(modifier = Modifier.weight(1f)) { RecentSongCard(song = song, onClick = { onSongClick(song, recentlyAdded) }) } }
+                            rowSongs.forEach { song -> Box(modifier = Modifier.weight(1f)) { RecentSongCard(song = song, onClick = { onSongClick(song, recentlyAdded) }, onLongClick = { selectedSongForOptions = song }) } }
                             repeat(columnsCount - rowSongs.size) { Spacer(modifier = Modifier.weight(1f)) }
                         }
                     }
                 } else {
                     items(recentlyAdded, key = { "new_main_list_" + it.id }) { song ->
-                        HomeSongListRowItem(song = song, isCurrent = false, onClick = { onSongClick(song, recentlyAdded) }, onAddToPlaylist = { onAddToPlaylist(song) })
+                        HomeSongListRowItem(song = song, isCurrent = false, onClick = { onSongClick(song, recentlyAdded) }, onOptionClick = { selectedSongForOptions = song })
                     }
                 }
             }
@@ -1489,7 +1501,8 @@ fun HomeScreen(
                                         items(favorites, key = { "fav_${it.id}" }) { song ->
                                             RecentSongCard(
                                                 song = song,
-                                                onClick = { onSongClick(song, favorites) }
+                                                onClick = { onSongClick(song, favorites) },
+                                                onLongClick = { selectedSongForOptions = song }
                                             )
                                         }
                                     }
@@ -1500,7 +1513,7 @@ fun HomeScreen(
                                         song = song,
                                         isCurrent = false,
                                         onClick = { onSongClick(song, favorites) },
-                                        onAddToPlaylist = { onAddToPlaylist(song) }
+                                        onOptionClick = { selectedSongForOptions = song }
                                     )
                                 }
                             }
@@ -1528,7 +1541,8 @@ fun HomeScreen(
                                         items(recentlyPlayed, key = { "hist_${it.id}" }) { song ->
                                             RecentSongCard(
                                                 song = song,
-                                                onClick = { onSongClick(song, recentlyPlayed) }
+                                                onClick = { onSongClick(song, recentlyPlayed) },
+                                                onLongClick = { selectedSongForOptions = song }
                                             )
                                         }
                                     }
@@ -1539,7 +1553,7 @@ fun HomeScreen(
                                         song = song,
                                         isCurrent = false,
                                         onClick = { onSongClick(song, recentlyPlayed) },
-                                        onAddToPlaylist = { onAddToPlaylist(song) }
+                                        onOptionClick = { selectedSongForOptions = song }
                                     )
                                 }
                             }
@@ -1567,7 +1581,8 @@ fun HomeScreen(
                                         items(mostPlayed, key = { "top_${it.id}" }) { song ->
                                             RecentSongCard(
                                                 song = song,
-                                                onClick = { onSongClick(song, mostPlayed) }
+                                                onClick = { onSongClick(song, mostPlayed) },
+                                                onLongClick = { selectedSongForOptions = song }
                                             )
                                         }
                                     }
@@ -1578,7 +1593,7 @@ fun HomeScreen(
                                         song = song,
                                         isCurrent = false,
                                         onClick = { onSongClick(song, mostPlayed) },
-                                        onAddToPlaylist = { onAddToPlaylist(song) }
+                                        onOptionClick = { selectedSongForOptions = song }
                                     )
                                 }
                             }
@@ -1593,7 +1608,7 @@ fun HomeScreen(
                         if (recentlyAdded.isEmpty()) {
                             item {
                                 Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                                    Text("Belum ada lagu terbaru.", color = TextSecondary, fontSize = 13.sp)
+                                    Text("Belum ada lagu baru dalam 1 minggu terakhir.", color = TextSecondary, fontSize = 13.sp)
                                 }
                             }
                         } else {
@@ -1606,7 +1621,8 @@ fun HomeScreen(
                                         items(recentlyAdded, key = { "new_${it.id}" }) { song ->
                                             RecentSongCard(
                                                 song = song,
-                                                onClick = { onSongClick(song, recentlyAdded) }
+                                                onClick = { onSongClick(song, recentlyAdded) },
+                                                onLongClick = { selectedSongForOptions = song }
                                             )
                                         }
                                     }
@@ -1617,7 +1633,7 @@ fun HomeScreen(
                                         song = song,
                                         isCurrent = false,
                                         onClick = { onSongClick(song, recentlyAdded) },
-                                        onAddToPlaylist = { onAddToPlaylist(song) }
+                                        onOptionClick = { selectedSongForOptions = song }
                                     )
                                 }
                             }
@@ -1855,6 +1871,84 @@ fun HomeScreen(
             containerColor = SurfaceSlate
         )
     }
+
+    if (selectedSongForOptions != null) {
+        val song = selectedSongForOptions!!
+        SongOptionsBottomSheet(
+            song = song,
+            onDismiss = { selectedSongForOptions = null },
+            onOpenArtist = {
+                selectedSongForOptions = null
+                onArtistSelect(song.artist)
+            },
+            onOpenAlbum = {
+                selectedSongForOptions = null
+                onAlbumSelect(song.album)
+            },
+            onAddToPlaylist = {
+                selectedSongForOptions = null
+                onAddToPlaylist(song)
+            },
+            onShowDetail = {
+                val s = song
+                selectedSongForOptions = null
+                selectedSongForDetails = s
+            },
+            onShare = {
+                selectedSongForOptions = null
+                try {
+                    val uri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, song.id)
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "audio/*"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    context.startActivity(Intent.createChooser(shareIntent, "Bagikan Lagu"))
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Gagal membagikan lagu: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            },
+            onDelete = {
+                val s = song
+                selectedSongForOptions = null
+                songToDelete = s
+            }
+        )
+    }
+
+    if (selectedSongForDetails != null) {
+        SongDetailsDialog(
+            song = selectedSongForDetails!!,
+            onDismiss = { selectedSongForDetails = null }
+        )
+    }
+
+    if (songToDelete != null) {
+        val song = songToDelete!!
+        AlertDialog(
+            onDismissRequest = { songToDelete = null },
+            title = { Text("Hapus Lagu", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = { Text("Apakah Anda yakin ingin menghapus '${song.title}' dari penyimpanan dan pustaka?", color = Color.White) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteSong(song)
+                        songToDelete = null
+                        Toast.makeText(context, "Lagu '${song.title}' dihapus", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5252))
+                ) {
+                    Text("Hapus", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { songToDelete = null }) {
+                    Text("Batal", color = TextSecondary)
+                }
+            },
+            containerColor = SurfaceSlate
+        )
+    }
 }
 
 @Composable
@@ -2085,7 +2179,11 @@ fun CategoryPill(
 }
 
 @Composable
-fun RecentSongCard(song: Song, onClick: () -> Unit) {
+fun RecentSongCard(
+    song: Song,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null
+) {
     val context = LocalContext.current
     val painter = rememberAsyncImagePainter(
         model = remember(song.path, song.title, song.artist, song.customCoverUri, song.dateModified) {
@@ -2101,7 +2199,7 @@ fun RecentSongCard(song: Song, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(114.dp)
-            .bounceClick(onClick = onClick)
+            .bounceClick(onClick = onClick, onLongClick = onLongClick)
             .graphicsLayer(),
         horizontalAlignment = Alignment.Start
     ) {
@@ -3094,7 +3192,7 @@ fun HomeSongListRowItem(
     song: Song,
     isCurrent: Boolean,
     onClick: () -> Unit,
-    onAddToPlaylist: () -> Unit
+    onOptionClick: () -> Unit
 ) {
     val context = LocalContext.current
     val painter = rememberAsyncImagePainter(
@@ -3175,15 +3273,176 @@ fun HomeSongListRowItem(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-            IconButton(onClick = onAddToPlaylist) {
+            IconButton(onClick = onOptionClick) {
                 Icon(
-                    imageVector = Icons.Default.PlaylistAdd,
-                    contentDescription = "Tambahkan ke playlist",
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "Opsi",
                     tint = TextSecondary,
                     modifier = Modifier.size(20.dp)
                 )
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SongOptionsBottomSheet(
+    song: Song,
+    onDismiss: () -> Unit,
+    onOpenArtist: () -> Unit,
+    onOpenAlbum: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+    onShowDetail: () -> Unit,
+    onShare: () -> Unit,
+    onDelete: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = SurfaceSlate,
+        dragHandle = { BottomSheetDefaults.DragHandle(color = TextSecondary) }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 36.dp)
+        ) {
+            // Header: song info
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp)
+            ) {
+                Text(
+                    text = song.title,
+                    color = Color.White,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "${song.artist} • ${song.album}",
+                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.08f), modifier = Modifier.padding(bottom = 8.dp))
+
+            SongOptionItem(
+                icon = Icons.Default.Person,
+                title = "Buka Artis",
+                onClick = onOpenArtist
+            )
+            SongOptionItem(
+                icon = Icons.Default.Album,
+                title = "Buka Album",
+                onClick = onOpenAlbum
+            )
+            SongOptionItem(
+                icon = Icons.Default.PlaylistAdd,
+                title = "Tambahkan Ke Playlist",
+                onClick = onAddToPlaylist
+            )
+            SongOptionItem(
+                icon = Icons.Default.Info,
+                title = "Detail",
+                onClick = onShowDetail
+            )
+            SongOptionItem(
+                icon = Icons.Default.Share,
+                title = "Bagikan",
+                onClick = onShare
+            )
+            SongOptionItem(
+                icon = Icons.Default.Delete,
+                title = "Hapus",
+                tint = Color(0xFFFF5252),
+                onClick = onDelete
+            )
+        }
+    }
+}
+
+@Composable
+private fun SongOptionItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    tint: Color = Color.White,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
+        Text(title, color = tint, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+@Composable
+fun SongDetailsDialog(song: Song, onDismiss: () -> Unit) {
+    val durationText = formatDuration(song.duration)
+    val file = remember(song.path) { java.io.File(song.path) }
+    val fileSize = remember(file) {
+        if (file.exists()) {
+            val bytes = file.length()
+            val mb = bytes.toDouble() / (1024 * 1024)
+            String.format(java.util.Locale.US, "%.2f MB", mb)
+        } else "-"
+    }
+    val extension = remember(song.path) { file.extension.uppercase().ifBlank { "AUDIO" } }
+    val dateAddedFormatted = remember(song.dateAdded) {
+        if (song.dateAdded > 0) {
+            val millis = if (song.dateAdded > 10_000_000_000L) song.dateAdded else song.dateAdded * 1000
+            val sdf = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm", java.util.Locale.getDefault())
+            sdf.format(java.util.Date(millis))
+        } else "-"
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Detail Lagu", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SongDetailItem("Judul", song.title)
+                SongDetailItem("Artis", song.artist)
+                SongDetailItem("Album", song.album)
+                SongDetailItem("Durasi", durationText)
+                SongDetailItem("Format", extension)
+                SongDetailItem("Ukuran File", fileSize)
+                SongDetailItem("Ditambahkan", dateAddedFormatted)
+                SongDetailItem("Lokasi File", song.path)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Tutup", color = EmeraldGreen)
+            }
+        },
+        containerColor = SurfaceSlate
+    )
+}
+
+@Composable
+private fun SongDetailItem(label: String, value: String) {
+    Column {
+        Text(text = label, color = TextSecondary, fontSize = 11.sp)
+        Text(text = value, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
     }
 }
 
