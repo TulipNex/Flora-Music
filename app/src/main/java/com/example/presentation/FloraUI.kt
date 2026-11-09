@@ -942,42 +942,7 @@ fun HomeScreen(
             contentPadding = PaddingValues(vertical = 4.dp)
         ) {
                 items(displayMainTabs) { tab ->
-                    val customIconName = customTabIcons[tab]
-                    val icon = if (customIconName != null) {
-                        when (customIconName) {
-                            "api" -> Icons.Default.Whatshot
-                            "bintang" -> Icons.Default.Star
-                            "bulan" -> Icons.Default.DarkMode
-                            "game/console" -> Icons.Default.VideogameAsset
-                            "olahraga" -> Icons.Default.FitnessCenter
-                            "buku" -> Icons.Default.MenuBook
-                            "gitar" -> Icons.Default.MusicNote
-                            "headphone" -> Icons.Default.Headphones
-                            "kamera" -> Icons.Default.CameraAlt
-                            "film" -> Icons.Default.Movie
-                            "mobil" -> Icons.Default.DirectionsCar
-                            "pesawat" -> Icons.Default.Flight
-                            "laptop" -> Icons.Default.Laptop
-                            "belanja" -> Icons.Default.ShoppingCart
-                            "tas" -> Icons.Default.Work
-                            else -> Icons.Default.Folder
-                        }
-                    } else {
-                        when (tab) {
-                            "Beranda" -> Icons.Default.Home
-                            "Lagu" -> Icons.Default.MusicNote
-                            "Album" -> Icons.Default.Album
-                            "Artis" -> Icons.Default.Person
-                            "Favorit" -> Icons.Default.Favorite
-                            "Riwayat" -> Icons.Default.History
-                            "Teratas" -> Icons.Default.TrendingUp
-                            "Terbaru" -> Icons.Default.FiberNew
-                            "Playlist" -> Icons.Default.PlaylistPlay
-                            "Genre" -> Icons.Default.Category
-                            "Koleksi" -> Icons.Default.LibraryMusic
-                            else -> Icons.Default.MusicNote
-                        }
-                    }
+                    val icon = getTabIcon(tab, customTabIcons[tab])
                     CategoryPill(
                         label = tab,
                         icon = icon,
@@ -1460,29 +1425,7 @@ fun HomeScreen(
 
         if (currentItems.size == 1 && currentItems.first().startsWith("CUSTOM_")) {
             val customName = currentItems.first().removePrefix("CUSTOM_")
-            val customIconName = customTabIcons[customName]
-            val icon = if (customIconName != null) {
-                when (customIconName) {
-                    "api" -> Icons.Default.Whatshot
-                    "bintang" -> Icons.Default.Star
-                    "bulan" -> Icons.Default.DarkMode
-                    "game/console" -> Icons.Default.VideogameAsset
-                    "olahraga" -> Icons.Default.FitnessCenter
-                    "buku" -> Icons.Default.MenuBook
-                    "gitar" -> Icons.Default.MusicNote
-                    "headphone" -> Icons.Default.Headphones
-                    "kamera" -> Icons.Default.CameraAlt
-                    "film" -> Icons.Default.Movie
-                    "mobil" -> Icons.Default.DirectionsCar
-                    "pesawat" -> Icons.Default.Flight
-                    "laptop" -> Icons.Default.Laptop
-                    "belanja" -> Icons.Default.ShoppingCart
-                    "tas" -> Icons.Default.Work
-                    else -> Icons.Default.Folder
-                }
-            } else {
-                Icons.Default.Folder
-            }
+            val icon = getTabIcon(customName, customTabIcons[customName])
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1506,7 +1449,7 @@ fun HomeScreen(
                 when {
                     itemKey == "Favorit" -> {
                         item {
-                            SectionHeader("Favorit", onSeeAll = null)
+                            SectionHeader("Favorit", icon = getTabIcon("Favorit", customTabIcons["Favorit"]), onSeeAll = null)
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                         if (favorites.isEmpty()) {
@@ -1546,7 +1489,7 @@ fun HomeScreen(
                     }
                     itemKey == "Riwayat" -> {
                         item {
-                            SectionHeader("Riwayat", onSeeAll = null)
+                            SectionHeader("Riwayat", icon = getTabIcon("Riwayat", customTabIcons["Riwayat"]), onSeeAll = null)
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                         if (recentlyPlayed.isEmpty()) {
@@ -1586,7 +1529,7 @@ fun HomeScreen(
                     }
                     itemKey == "Teratas" -> {
                         item {
-                            SectionHeader("Teratas", onSeeAll = null)
+                            SectionHeader("Teratas", icon = getTabIcon("Teratas", customTabIcons["Teratas"]), onSeeAll = null)
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                         if (mostPlayed.isEmpty()) {
@@ -1626,7 +1569,7 @@ fun HomeScreen(
                     }
                     itemKey == "Terbaru" -> {
                         item {
-                            SectionHeader("Terbaru", onSeeAll = null)
+                            SectionHeader("Terbaru", icon = getTabIcon("Terbaru", customTabIcons["Terbaru"]), onSeeAll = null)
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                         if (recentlyAdded.isEmpty()) {
@@ -1675,6 +1618,7 @@ fun HomeScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
+                                    Icon(getTabIcon("Playlist", customTabIcons["Playlist"]), contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(20.dp))
                                     Text("Daftar Playlist", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                     Text("(${allPlaylists.size})", fontSize = 14.sp, color = TextSecondary)
                                 }
@@ -1762,7 +1706,7 @@ fun HomeScreen(
                     }
                     itemKey == "Genre" -> {
                         item {
-                            SectionHeader("Genre", onSeeAll = null)
+                            SectionHeader("Genre", icon = getTabIcon("Genre", customTabIcons["Genre"]), onSeeAll = null)
                             Spacer(modifier = Modifier.height(12.dp))
                         }
                         if (uniqueGenresWithSong.isEmpty()) {
@@ -1801,29 +1745,7 @@ fun HomeScreen(
                     }
                     itemKey.startsWith("CUSTOM_") -> {
                         val customName = itemKey.removePrefix("CUSTOM_")
-                        val customIconName = customTabIcons[customName]
-                        val icon = if (customIconName != null) {
-                            when (customIconName) {
-                                "api" -> Icons.Default.Whatshot
-                                "bintang" -> Icons.Default.Star
-                                "bulan" -> Icons.Default.DarkMode
-                                "game/console" -> Icons.Default.VideogameAsset
-                                "olahraga" -> Icons.Default.FitnessCenter
-                                "buku" -> Icons.Default.MenuBook
-                                "gitar" -> Icons.Default.MusicNote
-                                "headphone" -> Icons.Default.Headphones
-                                "kamera" -> Icons.Default.CameraAlt
-                                "film" -> Icons.Default.Movie
-                                "mobil" -> Icons.Default.DirectionsCar
-                                "pesawat" -> Icons.Default.Flight
-                                "laptop" -> Icons.Default.Laptop
-                                "belanja" -> Icons.Default.ShoppingCart
-                                "tas" -> Icons.Default.Work
-                                else -> Icons.Default.Folder
-                            }
-                        } else {
-                            Icons.Default.Folder
-                        }
+                        val icon = getTabIcon(customName, customTabIcons[customName])
                         item {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -2108,13 +2030,21 @@ fun FolderBlacklistDialog(
 
 // Subcomponents helper for Home screen
 @Composable
-fun SectionHeader(title: String, onSeeAll: (() -> Unit)?) {
+fun SectionHeader(title: String, icon: ImageVector? = null, onSeeAll: (() -> Unit)? = null) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (icon != null) {
+                Icon(icon, contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(20.dp))
+            }
+            Text(text = title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
         if (onSeeAll != null) {
             TextButton(
                 onClick = onSeeAll,

@@ -68,6 +68,40 @@ val TAB_ICON_OPTIONS = listOf(
     "tag" to Icons.Default.LocalOffer
 )
 
+fun getTabIcon(tabName: String, customIconKey: String?): ImageVector {
+    if (customIconKey != null) {
+        val found = TAB_ICON_OPTIONS.find { it.first == customIconKey }?.second
+        if (found != null) return found
+    }
+    return when (tabName) {
+        "Beranda" -> Icons.Default.Home
+        "Lagu" -> Icons.Default.MusicNote
+        "Album" -> Icons.Default.Album
+        "Artis" -> Icons.Default.Person
+        "Favorit" -> Icons.Default.Favorite
+        "Riwayat" -> Icons.Default.History
+        "Teratas" -> Icons.Default.TrendingUp
+        "Terbaru" -> Icons.Default.AutoAwesome
+        "Playlist" -> Icons.Default.QueueMusic
+        "Genre" -> Icons.Default.Folder
+        "Koleksi" -> Icons.Default.LibraryMusic
+        else -> Icons.Default.Folder
+    }
+}
+
+fun getDefaultTabIconKey(tabName: String): String {
+    return when (tabName) {
+        "Favorit" -> "favorit"
+        "Riwayat" -> "tag"
+        "Teratas" -> "api"
+        "Terbaru" -> "petir"
+        "Playlist" -> "gitar"
+        "Genre" -> "folder"
+        "Koleksi" -> "folder"
+        else -> "api"
+    }
+}
+
 @Composable
 fun TabSettingsScreen(
     viewModel: MusicViewModel,
@@ -86,8 +120,11 @@ fun TabSettingsScreen(
                 list.add(TabEditItem("CUSTOM_${config.name}", config.name, TabRole.MAIN, true))
                 for (item in config.items) {
                     if (item.startsWith("CUSTOM_")) {
-                        list.add(TabEditItem(item, item.removePrefix("CUSTOM_"), TabRole.SUB, true))
-                    } else {
+                        val subName = item.removePrefix("CUSTOM_")
+                        if (subName != config.name) {
+                            list.add(TabEditItem(item, subName, TabRole.SUB, true))
+                        }
+                    } else if (item != config.name) {
                         list.add(TabEditItem(item, item, TabRole.SUB, false))
                     }
                 }
@@ -150,21 +187,25 @@ fun TabSettingsScreen(
         var currentIsCustom = false
 
         for (item in items) {
-            if (item.role == TabRole.HIDDEN) {
-                currentHidden.add(item.id)
+            if (item.role == TabRole.HIDDEN || item.role == TabRole.HEADER) {
+                if (item.role == TabRole.HIDDEN) {
+                    currentHidden.add(item.id)
+                }
                 continue
             }
 
             if (item.role == TabRole.MAIN) {
                 if (currentConfigName.isNotEmpty()) {
-                    newConfigs.add(TabConfig(currentConfigName, currentConfigItems.toList(), currentIsCustom))
+                    val finalItems = if (currentConfigItems.isEmpty()) {
+                        listOf(if (currentIsCustom) "CUSTOM_$currentConfigName" else currentConfigName)
+                    } else {
+                        currentConfigItems.toList()
+                    }
+                    newConfigs.add(TabConfig(currentConfigName, finalItems, currentIsCustom))
                 }
                 currentConfigName = item.name
                 currentConfigItems = mutableListOf()
                 currentIsCustom = item.isCustom
-                if (!item.isCustom) {
-                    currentConfigItems.add(item.id)
-                }
             } else if (item.role == TabRole.SUB) {
                 if (currentConfigName.isNotEmpty()) {
                     currentConfigItems.add(item.id)
@@ -177,7 +218,12 @@ fun TabSettingsScreen(
             }
         }
         if (currentConfigName.isNotEmpty()) {
-            newConfigs.add(TabConfig(currentConfigName, currentConfigItems.toList(), currentIsCustom))
+            val finalItems = if (currentConfigItems.isEmpty()) {
+                listOf(if (currentIsCustom) "CUSTOM_$currentConfigName" else currentConfigName)
+            } else {
+                currentConfigItems.toList()
+            }
+            newConfigs.add(TabConfig(currentConfigName, finalItems, currentIsCustom))
         }
 
         val fixedTabs = listOf("Lagu", "Artis", "Album")
@@ -187,7 +233,6 @@ fun TabSettingsScreen(
             false
         } else {
             viewModel.saveTabConfigs(newConfigs, currentHidden)
-            true
         }
     }
 
@@ -441,7 +486,7 @@ fun TabSettingsScreen(
         LaunchedEffect(currentItem) {
             editTabName = currentItem.name
             editTabRole = currentItem.role
-            editSelectedIcon = customTabIcons[currentItem.name] ?: "api"
+            editSelectedIcon = customTabIcons[currentItem.name] ?: getDefaultTabIconKey(currentItem.name)
 
             // Cari parent jika subtab
             val idx = allItems.indexOf(currentItem)
@@ -711,38 +756,27 @@ fun TabSettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 82.dp)
         ) {
+            val currentDraggedIndex = allItems.indexOfFirst { it.id == draggedItemId }
+            val currentTargetIndex = if (currentDraggedIndex != -1) {
+                (currentDraggedIndex + (dragOffset / itemHeightPx).roundToInt()).coerceIn(0, allItems.lastIndex)
+            } else -1
+
             allItems.forEachIndexed { index, item ->
                 key(item.id) {
-                    val isDragging = index == draggedIndex
-                    val zIndex = if (isDragging) 1f else 0f
+                    val isDragging = item.id == draggedItemId
+                    val zIndex = if (isDragging) 10f else 0f
 
                     val translationY = if (isDragging) {
                         dragOffset
-                    } else if (draggedIndex != -1) {
-                        if (draggedIndex < index && index <= targetIndex) {
+                    } else if (currentDraggedIndex != -1) {
+                        if (currentDraggedIndex < index && index <= currentTargetIndex) {
                             -itemHeightPx
-                        } else if (draggedIndex > index && index >= targetIndex) {
+                        } else if (currentDraggedIndex > index && index >= currentTargetIndex) {
                             itemHeightPx
                         } else 0f
                     } else 0f
 
-                    val icon: ImageVector = when {
-                        item.name == "Beranda" -> Icons.Default.Home
-                        item.name == "Lagu" -> Icons.Default.MusicNote
-                        item.name == "Album" -> Icons.Default.Album
-                        item.name == "Artis" -> Icons.Default.Person
-                        item.name == "Favorit" -> Icons.Default.Favorite
-                        item.name == "Riwayat" -> Icons.Default.History
-                        item.name == "Teratas" -> Icons.Default.TrendingUp
-                        item.name == "Terbaru" -> Icons.Default.AutoAwesome
-                        item.name == "Playlist" -> Icons.Default.QueueMusic
-                        item.name == "Genre" -> Icons.Default.Folder
-                        else -> {
-                            val savedIcon = customTabIcons[item.name] ?: "api"
-                            TAB_ICON_OPTIONS.find { it.first == savedIcon }?.second ?: Icons.Default.Whatshot
-                        }
-                    }
-
+                    val icon = getTabIcon(item.name, customTabIcons[item.name])
                     val isFixed = item.name in listOf("Lagu", "Artis", "Album", "Beranda")
 
                     Box(
@@ -760,7 +794,7 @@ fun TabSettingsScreen(
                             )
                             .then(
                                 if (item.role != TabRole.HEADER) {
-                                    Modifier.pointerInput(Unit) {
+                                    Modifier.pointerInput(item.id) {
                                         detectDragGesturesAfterLongPress(
                                             onDragStart = {
                                                 draggedItemId = item.id
@@ -771,25 +805,30 @@ fun TabSettingsScreen(
                                                 dragOffset += dragAmount.y
                                             },
                                             onDragEnd = {
-                                                if (draggedIndex != -1 && targetIndex != -1 && draggedIndex != targetIndex) {
-                                                    val moved = allItems.removeAt(draggedIndex)
-                                                    val headerIdx = allItems.indexOfFirst { it.role == TabRole.HEADER }
-                                                    val finalTarget = targetIndex.coerceIn(0, allItems.size)
+                                                val fromIdx = allItems.indexOfFirst { it.id == item.id }
+                                                if (fromIdx != -1) {
+                                                    val offsetSlots = (dragOffset / itemHeightPx).roundToInt()
+                                                    val toIdx = (fromIdx + offsetSlots).coerceIn(0, allItems.lastIndex)
+                                                    if (toIdx != fromIdx) {
+                                                        val moved = allItems.removeAt(fromIdx)
+                                                        val headerIdx = allItems.indexOfFirst { it.role == TabRole.HEADER }
+                                                        val finalTarget = toIdx.coerceIn(0, allItems.size)
 
-                                                    if (headerIdx != -1) {
-                                                        if (finalTarget <= headerIdx) {
-                                                            if (moved.role == TabRole.HIDDEN) {
-                                                                allItems.add(finalTarget, moved.copy(role = TabRole.SUB))
+                                                        if (headerIdx != -1) {
+                                                            if (finalTarget <= headerIdx) {
+                                                                if (moved.role == TabRole.HIDDEN) {
+                                                                    allItems.add(finalTarget, moved.copy(role = TabRole.SUB))
+                                                                } else {
+                                                                    allItems.add(finalTarget, moved)
+                                                                }
                                                             } else {
-                                                                allItems.add(finalTarget, moved)
+                                                                allItems.add(finalTarget, moved.copy(role = TabRole.HIDDEN))
                                                             }
                                                         } else {
-                                                            allItems.add(finalTarget, moved.copy(role = TabRole.HIDDEN))
+                                                            allItems.add(finalTarget, moved)
                                                         }
-                                                    } else {
-                                                        allItems.add(finalTarget, moved)
+                                                        validateAndSaveFn()
                                                     }
-                                                    validateAndSaveFn()
                                                 }
                                                 draggedItemId = null
                                                 dragOffset = 0f

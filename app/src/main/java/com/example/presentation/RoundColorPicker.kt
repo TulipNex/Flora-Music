@@ -26,6 +26,7 @@ fun RoundColorPicker(
     modifier: Modifier = Modifier
 ) {
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    val currentOnColorChange by rememberUpdatedState(onColorChange)
 
     Box(
         modifier = modifier
@@ -34,17 +35,17 @@ fun RoundColorPicker(
             .pointerInput(canvasSize) {
                 detectDragGestures(
                     onDragStart = { offset ->
-                        handleTouch(offset, canvasSize, onColorChange)
+                        handleTouch(offset, canvasSize, currentOnColorChange)
                     },
                     onDrag = { change, _ ->
                         change.consume()
-                        handleTouch(change.position, canvasSize, onColorChange)
+                        handleTouch(change.position, canvasSize, currentOnColorChange)
                     }
                 )
             }
             .pointerInput(canvasSize) {
                 detectTapGestures { offset ->
-                    handleTouch(offset, canvasSize, onColorChange)
+                    handleTouch(offset, canvasSize, currentOnColorChange)
                 }
             }
     ) {

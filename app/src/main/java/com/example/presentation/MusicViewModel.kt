@@ -429,6 +429,11 @@ class MusicViewModel(
             TabConfig("Artis", listOf("Artis")),
             TabConfig("Koleksi", listOf("Playlist", "Genre"))
         )
+        _customTabIcons.value = emptyMap()
+        viewModelScope.launch(Dispatchers.IO) {
+            val prefs = getApplication<Application>().getSharedPreferences("flora_prefs", android.content.Context.MODE_PRIVATE)
+            prefs.edit().remove("custom_tab_icons").apply()
+        }
         saveTabConfigs(defaultConfigs, emptyList())
     }
 
