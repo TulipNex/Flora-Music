@@ -447,6 +447,7 @@ list.add(TabEditItem("HEADER_HIDDEN", "Tab Tersembunyi", TabRole.HEADER, false))
                                 "Favorit" -> Icons.Default.Favorite
                                 "Riwayat" -> Icons.Default.History
                                 "Teratas" -> Icons.Default.TrendingUp
+                                "Terbaru" -> Icons.Default.FiberNew
                                 "Playlist" -> Icons.Default.PlaylistPlay
                                 "Genre" -> Icons.Default.Category
                                 else -> Icons.Default.Folder

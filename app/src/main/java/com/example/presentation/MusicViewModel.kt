@@ -171,20 +171,34 @@ class MusicViewModel(
                     }
                     configs.add(TabConfig(name, items, isCustom))
                 }
-                _tabConfigs.value = configs
-                
+                val allPossible = listOf("Lagu", "Album", "Artis", "Favorit", "Riwayat", "Teratas", "Terbaru", "Playlist", "Genre")
                 val savedHidden = prefs.getString("hidden_modules", null)
+                val hiddenList = mutableListOf<String>()
                 if (savedHidden != null) {
                     val hiddenJson = JSONArray(savedHidden)
-                    val hiddenList = mutableListOf<String>()
                     for (k in 0 until hiddenJson.length()) {
                         hiddenList.add(hiddenJson.getString(k))
                     }
-                    _hiddenModules.value = hiddenList
-                } else {
-                    val allPossible = listOf("Lagu", "Album", "Artis", "Favorit", "Riwayat", "Teratas", "Playlist", "Genre")
-                    _hiddenModules.value = allPossible.filter { it !in usedModules }
                 }
+                for (module in allPossible) {
+                    if (module !in usedModules && module !in hiddenList) {
+                        if (module == "Terbaru") {
+                            val berandaConfig = configs.find { it.name == "Beranda" }
+                            if (berandaConfig != null && "Terbaru" !in berandaConfig.items) {
+                                val newItems = berandaConfig.items.toMutableList().apply { add("Terbaru") }
+                                val idx = configs.indexOf(berandaConfig)
+                                configs[idx] = berandaConfig.copy(items = newItems)
+                                usedModules.add("Terbaru")
+                            } else {
+                                hiddenList.add("Terbaru")
+                            }
+                        } else {
+                            hiddenList.add(module)
+                        }
+                    }
+                }
+                _tabConfigs.value = configs
+                _hiddenModules.value = hiddenList
             } catch (e: Exception) {
                 loadDefaultTabs()
             }
@@ -392,7 +406,7 @@ class MusicViewModel(
     
     fun resetTabsToDefault() {
         val defaultConfigs = listOf(
-            TabConfig("Beranda", listOf("Favorit", "Riwayat", "Teratas")),
+            TabConfig("Beranda", listOf("Favorit", "Riwayat", "Teratas", "Terbaru")),
             TabConfig("Lagu", listOf("Lagu")),
             TabConfig("Album", listOf("Album")),
             TabConfig("Artis", listOf("Artis")),
@@ -403,7 +417,7 @@ class MusicViewModel(
 
     private fun loadDefaultTabs() {
         _tabConfigs.value = listOf(
-            TabConfig("Beranda", listOf("Favorit", "Riwayat", "Teratas")),
+            TabConfig("Beranda", listOf("Favorit", "Riwayat", "Teratas", "Terbaru")),
             TabConfig("Lagu", listOf("Lagu")),
             TabConfig("Album", listOf("Album")),
             TabConfig("Artis", listOf("Artis")),
@@ -483,6 +497,10 @@ class MusicViewModel(
         _blacklistedFolders
     ) { songs, blacklist ->
         songs.filter { getFolderPath(it.path) !in blacklist }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val recentlyAdded: StateFlow<List<Song>> = allSongs.map { songs ->
+        songs.sortedByDescending { it.dateAdded }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val allPlaylists: StateFlow<List<Playlist>> = repository.allPlaylists

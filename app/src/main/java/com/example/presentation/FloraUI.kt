@@ -764,6 +764,7 @@ fun HomeScreen(
     val favorites by viewModel.favoriteSongs.collectAsState()
     val recentlyPlayed by viewModel.recentlyPlayed.collectAsState()
     val mostPlayed by viewModel.mostPlayed.collectAsState()
+    val recentlyAdded by viewModel.recentlyAdded.collectAsState()
     val allPlaylists by viewModel.allPlaylists.collectAsState()
     val albumCoverPrefs by viewModel.albumCoverPrefs.collectAsState()
     val artistCoverPrefs by viewModel.artistCoverPrefs.collectAsState()
@@ -935,6 +936,7 @@ fun HomeScreen(
                             "Favorit" -> Icons.Default.Favorite
                             "Riwayat" -> Icons.Default.History
                             "Teratas" -> Icons.Default.TrendingUp
+                            "Terbaru" -> Icons.Default.FiberNew
                             "Playlist" -> Icons.Default.PlaylistPlay
                             "Genre" -> Icons.Default.Category
                             "Koleksi" -> Icons.Default.LibraryMusic
@@ -1320,6 +1322,37 @@ fun HomeScreen(
             }
         }
 
+        if (currentItems.contains("Terbaru") && currentItems.size == 1) {
+            item {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("Lagu Terbaru Anda", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("${recentlyAdded.size} Lagu", fontSize = 12.sp, color = TextSecondary)
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            if (recentlyAdded.isEmpty()) {
+                item {
+                    Box(modifier = Modifier.fillMaxWidth().height(150.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                        Text("Belum ada lagu terbaru.", color = TextSecondary, fontSize = 13.sp)
+                    }
+                }
+            } else {
+                if (isGridView) {
+                    val chunked = recentlyAdded.chunked(columnsCount)
+                    items(chunked, key = { row -> "new_main_" + row.joinToString("-") { it.id.toString() } }) { rowSongs ->
+                        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            rowSongs.forEach { song -> Box(modifier = Modifier.weight(1f)) { RecentSongCard(song = song, onClick = { onSongClick(song, recentlyAdded) }) } }
+                            repeat(columnsCount - rowSongs.size) { Spacer(modifier = Modifier.weight(1f)) }
+                        }
+                    }
+                } else {
+                    items(recentlyAdded, key = { "new_main_list_" + it.id }) { song ->
+                        HomeSongListRowItem(song = song, isCurrent = false, onClick = { onSongClick(song, recentlyAdded) }, onAddToPlaylist = { onAddToPlaylist(song) })
+                    }
+                }
+            }
+        }
+
         if (currentItems.contains("Playlist") && currentItems.size == 1) {
             item {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -1545,6 +1578,45 @@ fun HomeScreen(
                                         song = song,
                                         isCurrent = false,
                                         onClick = { onSongClick(song, mostPlayed) },
+                                        onAddToPlaylist = { onAddToPlaylist(song) }
+                                    )
+                                }
+                            }
+                        }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                    }
+                    itemKey == "Terbaru" -> {
+                        item {
+                            SectionHeader("Terbaru", onSeeAll = null)
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        if (recentlyAdded.isEmpty()) {
+                            item {
+                                Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                                    Text("Belum ada lagu terbaru.", color = TextSecondary, fontSize = 13.sp)
+                                }
+                            }
+                        } else {
+                            if (isGridView) {
+                                item {
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                        contentPadding = PaddingValues(bottom = 12.dp)
+                                    ) {
+                                        items(recentlyAdded, key = { "new_${it.id}" }) { song ->
+                                            RecentSongCard(
+                                                song = song,
+                                                onClick = { onSongClick(song, recentlyAdded) }
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                items(recentlyAdded, key = { "new_list_${it.id}" }) { song ->
+                                    HomeSongListRowItem(
+                                        song = song,
+                                        isCurrent = false,
+                                        onClick = { onSongClick(song, recentlyAdded) },
                                         onAddToPlaylist = { onAddToPlaylist(song) }
                                     )
                                 }
