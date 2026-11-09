@@ -319,7 +319,10 @@ fun FullPlayerScreen(
                                         scaleX = scaleState
                                         scaleY = scaleState
                                     }
-                                    .clickable { showLyricsView = true },
+                                    .clickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null
+                                    ) { showLyricsView = true },
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (artBitmap != null) {
@@ -692,7 +695,10 @@ fun FullPlayerScreen(
                                     scaleX = scaleState
                                     scaleY = scaleState
                                 }
-                                .clickable { showLyricsView = true },
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) { showLyricsView = true },
                             contentAlignment = Alignment.Center
                         ) {
                             val artworkPadding = 10.dp

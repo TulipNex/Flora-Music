@@ -29,6 +29,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.items
@@ -83,10 +85,21 @@ import androidx.compose.material3.LocalUseFallbackRippleImplementation
 
 import androidx.compose.foundation.LocalIndication
 
-fun Modifier.bounceClick(onClick: () -> Unit) = bounceClick(onClick = onClick, onLongClick = null)
+fun Modifier.bounceClick(onClick: () -> Unit) = bounceClick(showIndication = true, onClick = onClick, onLongClick = null)
+
+fun Modifier.bounceClick(
+    showIndication: Boolean,
+    onClick: () -> Unit
+) = bounceClick(showIndication = showIndication, onClick = onClick, onLongClick = null)
+
+fun Modifier.bounceClick(
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?
+) = bounceClick(showIndication = true, onClick = onClick, onLongClick = onLongClick)
 
 @OptIn(ExperimentalFoundationApi::class)
 fun Modifier.bounceClick(
+    showIndication: Boolean,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?
 ) = composed {
@@ -109,7 +122,7 @@ fun Modifier.bounceClick(
         }
         .combinedClickable(
             interactionSource = interactionSource,
-            indication = LocalIndication.current,
+            indication = if (showIndication) LocalIndication.current else null,
             onClick = onClick,
             onLongClick = onLongClick
         )
@@ -777,6 +790,8 @@ fun HomeScreen(
     val recentlyPlayed by viewModel.recentlyPlayed.collectAsState()
     val mostPlayed by viewModel.mostPlayed.collectAsState()
     val recentlyAdded by viewModel.recentlyAdded.collectAsState()
+    val recentlyAddedValue by viewModel.recentlyAddedValue.collectAsState()
+    val recentlyAddedUnit by viewModel.recentlyAddedUnit.collectAsState()
     val allPlaylists by viewModel.allPlaylists.collectAsState()
     val albumCoverPrefs by viewModel.albumCoverPrefs.collectAsState()
     val artistCoverPrefs by viewModel.artistCoverPrefs.collectAsState()
@@ -1349,7 +1364,7 @@ fun HomeScreen(
             if (recentlyAdded.isEmpty()) {
                 item {
                     Box(modifier = Modifier.fillMaxWidth().height(150.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                        Text("Belum ada lagu baru dalam 1 minggu terakhir.", color = TextSecondary, fontSize = 13.sp)
+                        Text("Belum ada lagu baru dalam $recentlyAddedValue $recentlyAddedUnit terakhir.", color = TextSecondary, fontSize = 13.sp)
                     }
                 }
             } else {
@@ -1612,7 +1627,7 @@ fun HomeScreen(
                         if (recentlyAdded.isEmpty()) {
                             item {
                                 Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                                    Text("Belum ada lagu baru dalam 1 minggu terakhir.", color = TextSecondary, fontSize = 13.sp)
+                                    Text("Belum ada lagu baru dalam $recentlyAddedValue $recentlyAddedUnit terakhir.", color = TextSecondary, fontSize = 13.sp)
                                 }
                             }
                         } else {
@@ -2203,7 +2218,7 @@ fun RecentSongCard(
     Column(
         modifier = Modifier
             .width(114.dp)
-            .bounceClick(onClick = onClick, onLongClick = onLongClick)
+            .bounceClick(showIndication = false, onClick = onClick, onLongClick = onLongClick)
             .graphicsLayer(),
         horizontalAlignment = Alignment.Start
     ) {
@@ -2258,7 +2273,7 @@ fun PlaylistGridCell(playlist: Playlist, onClick: () -> Unit) {
         modifier = Modifier
             .width(110.dp)
             .height(98.dp)
-            .bounceClick(onClick = onClick)
+            .bounceClick(showIndication = false, onClick = onClick)
             .graphicsLayer(),
         colors = CardDefaults.cardColors(containerColor = CardSlate)
     ) {
@@ -2305,7 +2320,7 @@ fun AlbumGridCell(albumName: String, songs: List<Song>, preferredCoverPath: Stri
     Column(
         modifier = Modifier
             .width(110.dp)
-            .bounceClick(onClick = onClick)
+            .bounceClick(showIndication = false, onClick = onClick)
             .graphicsLayer()
     ) {
         Box(
@@ -2365,7 +2380,7 @@ fun ArtistGridCell(artistName: String, songs: List<Song>, preferredCoverPath: St
     Column(
         modifier = Modifier
             .width(96.dp)
-            .clickable(onClick = onClick)
+            .bounceClick(showIndication = false, onClick = onClick)
             .graphicsLayer(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -2406,7 +2421,7 @@ fun GenreGridCell(genreName: String, songs: List<Song>, onClick: () -> Unit) {
     Column(
         modifier = Modifier
             .width(96.dp)
-            .clickable(onClick = onClick)
+            .bounceClick(showIndication = false, onClick = onClick)
             .graphicsLayer(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -3752,8 +3767,15 @@ fun SettingsScreen(
     }
 
     val isGridView by viewModel.isGridView.collectAsState()
+    val historyLimit by viewModel.historyLimit.collectAsState()
+    val mostPlayedLimit by viewModel.mostPlayedLimit.collectAsState()
+    val recentlyAddedValue by viewModel.recentlyAddedValue.collectAsState()
+    val recentlyAddedUnit by viewModel.recentlyAddedUnit.collectAsState()
 
     var showFolderBlacklistDialog by remember { mutableStateOf(false) }
+    var showHistoryLimitDialog by remember { mutableStateOf(false) }
+    var showMostPlayedLimitDialog by remember { mutableStateOf(false) }
+    var showRecentlyAddedRangeDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         // Header
@@ -3798,6 +3820,61 @@ fun SettingsScreen(
                     headlineContent = { Text("Tab Beranda", color = Color.White) },
                     supportingContent = { Text("Atur urutan dan visibilitas tab", color = TextSecondary) },
                     trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.White) },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Batas Tampilan Lagu",
+                    color = EmeraldGreen,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
+                )
+
+                ListItem(
+                    modifier = Modifier.clickable { showHistoryLimitDialog = true },
+                    headlineContent = { Text("Batas Lagu Riwayat", color = Color.White) },
+                    supportingContent = { Text("Jumlah maksimal lagu yang tampil di riwayat", color = TextSecondary) },
+                    trailingContent = {
+                        Text(
+                            text = if (historyLimit <= 0) "Tanpa Batas" else "$historyLimit Lagu",
+                            color = EmeraldGreen,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+
+                ListItem(
+                    modifier = Modifier.clickable { showMostPlayedLimitDialog = true },
+                    headlineContent = { Text("Batas Lagu Teratas", color = Color.White) },
+                    supportingContent = { Text("Jumlah maksimal lagu terpopuler yang tampil", color = TextSecondary) },
+                    trailingContent = {
+                        Text(
+                            text = if (mostPlayedLimit <= 0) "Tanpa Batas" else "$mostPlayedLimit Lagu",
+                            color = EmeraldGreen,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                )
+
+                ListItem(
+                    modifier = Modifier.clickable { showRecentlyAddedRangeDialog = true },
+                    headlineContent = { Text("Rentang Waktu Lagu Terbaru", color = Color.White) },
+                    supportingContent = { Text("Hanya tampilkan lagu dalam rentang waktu ini", color = TextSecondary) },
+                    trailingContent = {
+                        Text(
+                            text = "$recentlyAddedValue $recentlyAddedUnit",
+                            color = EmeraldGreen,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
 
@@ -3873,6 +3950,183 @@ fun SettingsScreen(
         FolderBlacklistDialog(
             viewModel = viewModel,
             onDismiss = { showFolderBlacklistDialog = false }
+        )
+    }
+
+    if (showHistoryLimitDialog) {
+        var tempInput by remember { mutableStateOf(if (historyLimit == 0) "0" else historyLimit.toString()) }
+        AlertDialog(
+            onDismissRequest = { showHistoryLimitDialog = false },
+            containerColor = CardSlate,
+            title = { Text("Batas Lagu Riwayat", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "Tentukan jumlah maksimal lagu yang disimpan dan ditampilkan pada tab Riwayat. Masukkan 0 untuk tanpa batas.",
+                        color = TextSecondary,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = tempInput,
+                        onValueChange = { if (it.all { char -> char.isDigit() }) tempInput = it },
+                        label = { Text("Jumlah Lagu (0 = Tanpa Batas)", color = TextSecondary) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = EmeraldGreen,
+                            unfocusedBorderColor = TextSecondary,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val num = tempInput.toIntOrNull() ?: 50
+                        viewModel.setHistoryLimit(num)
+                        showHistoryLimitDialog = false
+                    }
+                ) {
+                    Text("Simpan", color = EmeraldGreen, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showHistoryLimitDialog = false }) {
+                    Text("Batal", color = TextSecondary)
+                }
+            }
+        )
+    }
+
+    if (showMostPlayedLimitDialog) {
+        var tempInput by remember { mutableStateOf(if (mostPlayedLimit == 0) "0" else mostPlayedLimit.toString()) }
+        AlertDialog(
+            onDismissRequest = { showMostPlayedLimitDialog = false },
+            containerColor = CardSlate,
+            title = { Text("Batas Lagu Teratas", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "Tentukan jumlah maksimal lagu terpopuler yang ditampilkan pada tab Teratas. Masukkan 0 untuk tanpa batas.",
+                        color = TextSecondary,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = tempInput,
+                        onValueChange = { if (it.all { char -> char.isDigit() }) tempInput = it },
+                        label = { Text("Jumlah Lagu (0 = Tanpa Batas)", color = TextSecondary) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = EmeraldGreen,
+                            unfocusedBorderColor = TextSecondary,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val num = tempInput.toIntOrNull() ?: 50
+                        viewModel.setMostPlayedLimit(num)
+                        showMostPlayedLimitDialog = false
+                    }
+                ) {
+                    Text("Simpan", color = EmeraldGreen, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMostPlayedLimitDialog = false }) {
+                    Text("Batal", color = TextSecondary)
+                }
+            }
+        )
+    }
+
+    if (showRecentlyAddedRangeDialog) {
+        var tempValue by remember { mutableStateOf(recentlyAddedValue.toString()) }
+        var tempUnit by remember { mutableStateOf(recentlyAddedUnit) }
+        val units = listOf("Hari", "Minggu", "Bulan", "Tahun")
+
+        AlertDialog(
+            onDismissRequest = { showRecentlyAddedRangeDialog = false },
+            containerColor = CardSlate,
+            title = { Text("Rentang Waktu Lagu Terbaru", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "Hanya lagu yang ditambahkan dalam rentang waktu ini yang akan masuk ke tab Terbaru.",
+                        color = TextSecondary,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = tempValue,
+                        onValueChange = { if (it.all { char -> char.isDigit() }) tempValue = it },
+                        label = { Text("Angka", color = TextSecondary) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = EmeraldGreen,
+                            unfocusedBorderColor = TextSecondary,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Parameter Waktu:", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        units.forEach { unit ->
+                            val isSelected = tempUnit == unit
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) EmeraldGreen else SurfaceSlate)
+                                    .clickable { tempUnit = unit }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = unit,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) Color.Black else Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val num = tempValue.toIntOrNull()?.coerceAtLeast(1) ?: 1
+                        viewModel.setRecentlyAddedRange(num, tempUnit)
+                        showRecentlyAddedRangeDialog = false
+                    }
+                ) {
+                    Text("Simpan", color = EmeraldGreen, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRecentlyAddedRangeDialog = false }) {
+                    Text("Batal", color = TextSecondary)
+                }
+            }
         )
     }
 }

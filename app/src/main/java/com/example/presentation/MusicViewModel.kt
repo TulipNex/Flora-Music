@@ -110,6 +110,18 @@ class MusicViewModel(
     private val _lyricsCustomFontUri = MutableStateFlow("")
     val lyricsCustomFontUri: StateFlow<String> = _lyricsCustomFontUri.asStateFlow()
 
+    private val _historyLimit = MutableStateFlow(50)
+    val historyLimit: StateFlow<Int> = _historyLimit.asStateFlow()
+
+    private val _mostPlayedLimit = MutableStateFlow(50)
+    val mostPlayedLimit: StateFlow<Int> = _mostPlayedLimit.asStateFlow()
+
+    private val _recentlyAddedValue = MutableStateFlow(1)
+    val recentlyAddedValue: StateFlow<Int> = _recentlyAddedValue.asStateFlow()
+
+    private val _recentlyAddedUnit = MutableStateFlow("Minggu")
+    val recentlyAddedUnit: StateFlow<String> = _recentlyAddedUnit.asStateFlow()
+
     private fun getFolderPath(path: String): String {
         return try {
             java.io.File(path).parent ?: "/"
@@ -139,6 +151,11 @@ class MusicViewModel(
         _lyricsLineHeightMultiplier.value = prefs.getFloat("lyrics_line_height_multiplier", 1.5f)
         _lyricsFontFamily.value = prefs.getString("lyrics_font_family", "DEFAULT") ?: "DEFAULT"
         _lyricsCustomFontUri.value = prefs.getString("lyrics_custom_font_uri", "") ?: ""
+
+        _historyLimit.value = prefs.getInt("history_limit", 50)
+        _mostPlayedLimit.value = prefs.getInt("most_played_limit", 50)
+        _recentlyAddedValue.value = prefs.getInt("recently_added_value", 1)
+        _recentlyAddedUnit.value = prefs.getString("recently_added_unit", "Minggu") ?: "Minggu"
         
         val savedCustomIcons = prefs.getString("custom_tab_icons", null)
         if (savedCustomIcons != null) {
@@ -465,6 +482,39 @@ class MusicViewModel(
         return true
     }
 
+    fun setHistoryLimit(limit: Int) {
+        val safeLimit = limit.coerceAtLeast(0)
+        _historyLimit.value = safeLimit
+        getApplication<Application>()
+            .getSharedPreferences("flora_prefs", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putInt("history_limit", safeLimit)
+            .apply()
+    }
+
+    fun setMostPlayedLimit(limit: Int) {
+        val safeLimit = limit.coerceAtLeast(0)
+        _mostPlayedLimit.value = safeLimit
+        getApplication<Application>()
+            .getSharedPreferences("flora_prefs", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putInt("most_played_limit", safeLimit)
+            .apply()
+    }
+
+    fun setRecentlyAddedRange(value: Int, unit: String) {
+        val safeValue = value.coerceAtLeast(1)
+        val safeUnit = if (unit in listOf("Hari", "Minggu", "Bulan", "Tahun")) unit else "Minggu"
+        _recentlyAddedValue.value = safeValue
+        _recentlyAddedUnit.value = safeUnit
+        getApplication<Application>()
+            .getSharedPreferences("flora_prefs", android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putInt("recently_added_value", safeValue)
+            .putString("recently_added_unit", safeUnit)
+            .apply()
+    }
+
     val allAvailableFolders: StateFlow<Set<String>> = repository.allSongs
         .map { songs ->
             songs.map { getFolderPath(it.path) }.toSet()
@@ -487,23 +537,38 @@ class MusicViewModel(
 
     val recentlyPlayed: StateFlow<List<Song>> = combine(
         repository.recentlyPlayedSongs,
-        _blacklistedFolders
-    ) { songs, blacklist ->
-        songs.filter { getFolderPath(it.path) !in blacklist }
+        _blacklistedFolders,
+        _historyLimit
+    ) { songs, blacklist, limit ->
+        val filtered = songs.filter { getFolderPath(it.path) !in blacklist }
+        if (limit > 0) filtered.take(limit) else filtered
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val mostPlayed: StateFlow<List<Song>> = combine(
         repository.mostPlayedSongs,
-        _blacklistedFolders
-    ) { songs, blacklist ->
-        songs.filter { getFolderPath(it.path) !in blacklist }
+        _blacklistedFolders,
+        _mostPlayedLimit
+    ) { songs, blacklist, limit ->
+        val filtered = songs.filter { getFolderPath(it.path) !in blacklist }
+        if (limit > 0) filtered.take(limit) else filtered
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val recentlyAdded: StateFlow<List<Song>> = allSongs.map { songs ->
-        val oneWeekAgoSeconds = (System.currentTimeMillis() / 1000) - (7 * 24 * 60 * 60)
+    val recentlyAdded: StateFlow<List<Song>> = combine(
+        allSongs,
+        _recentlyAddedValue,
+        _recentlyAddedUnit
+    ) { songs, value, unit ->
+        val durationSeconds = when (unit.lowercase()) {
+            "hari" -> value * 24L * 60 * 60
+            "minggu" -> value * 7L * 24 * 60 * 60
+            "bulan" -> value * 30L * 24 * 60 * 60
+            "tahun" -> value * 365L * 24 * 60 * 60
+            else -> value * 7L * 24 * 60 * 60
+        }
+        val cutoffSeconds = (System.currentTimeMillis() / 1000) - durationSeconds
         songs.filter {
             val songSeconds = if (it.dateAdded > 10_000_000_000L) it.dateAdded / 1000 else it.dateAdded
-            songSeconds >= oneWeekAgoSeconds
+            songSeconds >= cutoffSeconds
         }.sortedByDescending { it.dateAdded }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

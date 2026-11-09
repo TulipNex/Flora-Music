@@ -20,10 +20,10 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE isFavorite = 1 ORDER BY title ASC")
     fun getFavoriteSongs(): Flow<List<Song>>
 
-    @Query("SELECT * FROM songs WHERE lastPlayedTime > 0 ORDER BY lastPlayedTime DESC LIMIT 50")
+    @Query("SELECT * FROM songs WHERE lastPlayedTime > 0 ORDER BY lastPlayedTime DESC")
     fun getRecentlyPlayedSongs(): Flow<List<Song>>
 
-    @Query("SELECT * FROM songs WHERE playCount > 0 ORDER BY playCount DESC LIMIT 50")
+    @Query("SELECT * FROM songs WHERE playCount > 0 ORDER BY playCount DESC")
     fun getMostPlayedSongs(): Flow<List<Song>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
