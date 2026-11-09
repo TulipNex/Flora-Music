@@ -1389,249 +1389,295 @@ fun HomeScreen(
             }
         }
 
-        if (currentItems.size > 1) {
-            // Favorit
-            if (currentItems.contains("Favorit")) {
-                item {
-                    SectionHeader("Favorit", onSeeAll = null)
-                    Spacer(modifier = Modifier.height(12.dp))
+        if (currentItems.size == 1 && currentItems.first().startsWith("CUSTOM_")) {
+            val customName = currentItems.first().removePrefix("CUSTOM_")
+            val customIconName = customTabIcons[customName]
+            val icon = if (customIconName != null) {
+                when (customIconName) {
+                    "api" -> Icons.Default.Whatshot
+                    "bintang" -> Icons.Default.Star
+                    "bulan" -> Icons.Default.DarkMode
+                    "game/console" -> Icons.Default.VideogameAsset
+                    "olahraga" -> Icons.Default.FitnessCenter
+                    "buku" -> Icons.Default.MenuBook
+                    "gitar" -> Icons.Default.MusicNote
+                    "headphone" -> Icons.Default.Headphones
+                    "kamera" -> Icons.Default.CameraAlt
+                    "film" -> Icons.Default.Movie
+                    "mobil" -> Icons.Default.DirectionsCar
+                    "pesawat" -> Icons.Default.Flight
+                    "laptop" -> Icons.Default.Laptop
+                    "belanja" -> Icons.Default.ShoppingCart
+                    "tas" -> Icons.Default.Work
+                    else -> Icons.Default.Folder
                 }
-                if (favorites.isEmpty()) {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                            Text("Belum ada lagu favorit.", color = TextSecondary, fontSize = 13.sp)
-                        }
-                    }
-                } else {
-                    if (isGridView) {
-                        item {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                contentPadding = PaddingValues(bottom = 12.dp)
-                            ) {
-                                items(favorites, key = { "fav_${it.id}" }) { song ->
-                                    RecentSongCard(
-                                        song = song,
-                                        onClick = { onSongClick(song, favorites) }
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        items(favorites, key = { "fav_list_${it.id}" }) { song ->
-                            HomeSongListRowItem(
-                                song = song,
-                                isCurrent = false,
-                                onClick = { onSongClick(song, favorites) },
-                                onAddToPlaylist = { onAddToPlaylist(song) }
-                            )
-                        }
-                    }
-                }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
+            } else {
+                Icons.Default.Folder
             }
-
-            // Riwayat
-            if (currentItems.contains("Riwayat")) {
-                item {
-                    SectionHeader("Riwayat", onSeeAll = null)
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-                if (recentlyPlayed.isEmpty()) {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                            Text("Belum ada riwayat putar.", color = TextSecondary, fontSize = 13.sp)
-                        }
-                    }
-                } else {
-                    if (isGridView) {
-                        item {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                contentPadding = PaddingValues(bottom = 12.dp)
-                            ) {
-                                items(recentlyPlayed, key = { "hist_${it.id}" }) { song ->
-                                    RecentSongCard(
-                                        song = song,
-                                        onClick = { onSongClick(song, recentlyPlayed) }
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        items(recentlyPlayed, key = { "hist_list_${it.id}" }) { song ->
-                            HomeSongListRowItem(
-                                song = song,
-                                isCurrent = false,
-                                onClick = { onSongClick(song, recentlyPlayed) },
-                                onAddToPlaylist = { onAddToPlaylist(song) }
-                            )
-                        }
-                    }
-                }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
-            }
-
-            // Teratas
-            if (currentItems.contains("Teratas")) {
-                item {
-                    SectionHeader("Teratas", onSeeAll = null)
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-                if (mostPlayed.isEmpty()) {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                            Text("Belum ada lagu yang sering diputar.", color = TextSecondary, fontSize = 13.sp)
-                        }
-                    }
-                } else {
-                    if (isGridView) {
-                        item {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                contentPadding = PaddingValues(bottom = 12.dp)
-                            ) {
-                                items(mostPlayed, key = { "top_${it.id}" }) { song ->
-                                    RecentSongCard(
-                                        song = song,
-                                        onClick = { onSongClick(song, mostPlayed) }
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        items(mostPlayed, key = { "top_list_${it.id}" }) { song ->
-                            HomeSongListRowItem(
-                                song = song,
-                                isCurrent = false,
-                                onClick = { onSongClick(song, mostPlayed) },
-                                onAddToPlaylist = { onAddToPlaylist(song) }
-                            )
-                        }
-                    }
-                }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
-            }
-
-            // Playlist
-            if (currentItems.contains("Playlist")) {
-                item {
+            item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text("Daftar Playlist", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        Text("(${allPlaylists.size})", fontSize = 14.sp, color = TextSecondary)
-                    }
-
-                    Button(
-                        onClick = { showCreatePlaylistDialog = true },
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                        modifier = Modifier
-                            .height(32.dp)
-                            .testTag("create_playlist_button_home")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Buat Playlist",
-                            modifier = Modifier.size(16.dp),
-                            tint = SoftWhite
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "Buat",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SoftWhite
-                        )
-                    }
+                    Icon(icon, contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(22.dp))
+                    Text(customName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
                 Spacer(modifier = Modifier.height(12.dp))
             }
-            if (allPlaylists.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp)
-                            .background(CardSlate, RoundedCornerShape(12.dp))
-                            .clickable { showCreatePlaylistDialog = true },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Text(
-                                text = "Belum ada playlist manual.",
-                                color = TextSecondary,
-                                fontSize = 13.sp
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "Tekan tombol + Buat di atas untuk membuat!",
-                                color = EmeraldGreen,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
+            item {
+                Box(modifier = Modifier.fillMaxWidth().height(150.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                    Text("Tab kosong.", color = TextSecondary, fontSize = 13.sp)
                 }
-            } else {
-                if (isGridView) {
-                    item {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(14.dp),
-                            contentPadding = PaddingValues(bottom = 12.dp)
-                        ) {
-                            items(allPlaylists, key = { "pl_${it.id}" }) { playlist ->
-                                PlaylistGridCell(
-                                    playlist = playlist,
-                                    onClick = { onPlaylistSelect(playlist) }
-                                )
+            }
+        }
+
+        if (currentItems.size > 1) {
+            currentItems.filter { it != currentConfig?.name }.forEach { itemKey ->
+                when {
+                    itemKey == "Favorit" -> {
+                        item {
+                            SectionHeader("Favorit", onSeeAll = null)
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        if (favorites.isEmpty()) {
+                            item {
+                                Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                                    Text("Belum ada lagu favorit.", color = TextSecondary, fontSize = 13.sp)
+                                }
+                            }
+                        } else {
+                            if (isGridView) {
+                                item {
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                        contentPadding = PaddingValues(bottom = 12.dp)
+                                    ) {
+                                        items(favorites, key = { "fav_${it.id}" }) { song ->
+                                            RecentSongCard(
+                                                song = song,
+                                                onClick = { onSongClick(song, favorites) }
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                items(favorites, key = { "fav_list_${it.id}" }) { song ->
+                                    HomeSongListRowItem(
+                                        song = song,
+                                        isCurrent = false,
+                                        onClick = { onSongClick(song, favorites) },
+                                        onAddToPlaylist = { onAddToPlaylist(song) }
+                                    )
+                                }
                             }
                         }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
-                } else {
-                    items(allPlaylists, key = { "pl_list_${it.id}" }) { plt ->
-                        HomePlaylistListRowItem(
-                            playlist = plt,
-                            onClick = { onPlaylistSelect(plt) }
-                        )
-                    }
-                }
-            }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-            }
-
-            // Genre
-            if (currentItems.contains("Genre")) {
-                item {
-                    SectionHeader("Genre", onSeeAll = null)
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-                if (uniqueGenresWithSong.isEmpty()) {
-                    item {
-                        Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                            Text("Genre kosong. Pindai musik lokal Anda.", color = TextSecondary, fontSize = 13.sp)
-                        }
-                    }
-                } else {
-                    if (isGridView) {
+                    itemKey == "Riwayat" -> {
                         item {
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                contentPadding = PaddingValues(bottom = 12.dp)
+                            SectionHeader("Riwayat", onSeeAll = null)
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        if (recentlyPlayed.isEmpty()) {
+                            item {
+                                Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                                    Text("Belum ada riwayat putar.", color = TextSecondary, fontSize = 13.sp)
+                                }
+                            }
+                        } else {
+                            if (isGridView) {
+                                item {
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                        contentPadding = PaddingValues(bottom = 12.dp)
+                                    ) {
+                                        items(recentlyPlayed, key = { "hist_${it.id}" }) { song ->
+                                            RecentSongCard(
+                                                song = song,
+                                                onClick = { onSongClick(song, recentlyPlayed) }
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                items(recentlyPlayed, key = { "hist_list_${it.id}" }) { song ->
+                                    HomeSongListRowItem(
+                                        song = song,
+                                        isCurrent = false,
+                                        onClick = { onSongClick(song, recentlyPlayed) },
+                                        onAddToPlaylist = { onAddToPlaylist(song) }
+                                    )
+                                }
+                            }
+                        }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                    }
+                    itemKey == "Teratas" -> {
+                        item {
+                            SectionHeader("Teratas", onSeeAll = null)
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        if (mostPlayed.isEmpty()) {
+                            item {
+                                Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                                    Text("Belum ada lagu yang sering diputar.", color = TextSecondary, fontSize = 13.sp)
+                                }
+                            }
+                        } else {
+                            if (isGridView) {
+                                item {
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                        contentPadding = PaddingValues(bottom = 12.dp)
+                                    ) {
+                                        items(mostPlayed, key = { "top_${it.id}" }) { song ->
+                                            RecentSongCard(
+                                                song = song,
+                                                onClick = { onSongClick(song, mostPlayed) }
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                items(mostPlayed, key = { "top_list_${it.id}" }) { song ->
+                                    HomeSongListRowItem(
+                                        song = song,
+                                        isCurrent = false,
+                                        onClick = { onSongClick(song, mostPlayed) },
+                                        onAddToPlaylist = { onAddToPlaylist(song) }
+                                    )
+                                }
+                            }
+                        }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                    }
+                    itemKey == "Playlist" -> {
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                items(uniqueGenresWithSong.keys.toList(), key = { "genre_$it" }) { genre ->
-                                    GenreGridCell(
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("Daftar Playlist", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    Text("(${allPlaylists.size})", fontSize = 14.sp, color = TextSecondary)
+                                }
+
+                                Button(
+                                    onClick = { showCreatePlaylistDialog = true },
+                                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGreen),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier
+                                        .height(32.dp)
+                                        .testTag("create_playlist_button_home")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Buat Playlist",
+                                        modifier = Modifier.size(16.dp),
+                                        tint = SoftWhite
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Buat",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = SoftWhite
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        if (allPlaylists.isEmpty()) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(120.dp)
+                                        .background(CardSlate, RoundedCornerShape(12.dp))
+                                        .clickable { showCreatePlaylistDialog = true },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center,
+                                        modifier = Modifier.padding(16.dp)
+                                    ) {
+                                        Text(
+                                            text = "Belum ada playlist manual.",
+                                            color = TextSecondary,
+                                            fontSize = 13.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(6.dp))
+                                        Text(
+                                            text = "Tekan tombol + Buat di atas untuk membuat!",
+                                            color = EmeraldGreen,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            if (isGridView) {
+                                item {
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                        contentPadding = PaddingValues(bottom = 12.dp)
+                                    ) {
+                                        items(allPlaylists, key = { "pl_${it.id}" }) { playlist ->
+                                            PlaylistGridCell(
+                                                playlist = playlist,
+                                                onClick = { onPlaylistSelect(playlist) }
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                items(allPlaylists, key = { "pl_list_${it.id}" }) { plt ->
+                                    HomePlaylistListRowItem(
+                                        playlist = plt,
+                                        onClick = { onPlaylistSelect(plt) }
+                                    )
+                                }
+                            }
+                        }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                    }
+                    itemKey == "Genre" -> {
+                        item {
+                            SectionHeader("Genre", onSeeAll = null)
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        if (uniqueGenresWithSong.isEmpty()) {
+                            item {
+                                Box(modifier = Modifier.fillMaxWidth().height(120.dp).background(CardSlate, RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
+                                    Text("Genre kosong. Pindai musik lokal Anda.", color = TextSecondary, fontSize = 13.sp)
+                                }
+                            }
+                        } else {
+                            if (isGridView) {
+                                item {
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                        contentPadding = PaddingValues(bottom = 12.dp)
+                                    ) {
+                                        items(uniqueGenresWithSong.keys.toList(), key = { "genre_$it" }) { genre ->
+                                            GenreGridCell(
+                                                genreName = genre,
+                                                songs = uniqueGenresWithSong[genre] ?: emptyList(),
+                                                onClick = { onGenreSelect(genre) }
+                                            )
+                                        }
+                                    }
+                                }
+                            } else {
+                                items(uniqueGenresWithSong.keys.toList(), key = { "genre_list_$it" }) { genre ->
+                                    HomeGenreListRowItem(
                                         genreName = genre,
                                         songs = uniqueGenresWithSong[genre] ?: emptyList(),
                                         onClick = { onGenreSelect(genre) }
@@ -1639,17 +1685,58 @@ fun HomeScreen(
                                 }
                             }
                         }
-                    } else {
-                        items(uniqueGenresWithSong.keys.toList(), key = { "genre_list_$it" }) { genre ->
-                            HomeGenreListRowItem(
-                                genreName = genre,
-                                songs = uniqueGenresWithSong[genre] ?: emptyList(),
-                                onClick = { onGenreSelect(genre) }
-                            )
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
+                    }
+                    itemKey.startsWith("CUSTOM_") -> {
+                        val customName = itemKey.removePrefix("CUSTOM_")
+                        val customIconName = customTabIcons[customName]
+                        val icon = if (customIconName != null) {
+                            when (customIconName) {
+                                "api" -> Icons.Default.Whatshot
+                                "bintang" -> Icons.Default.Star
+                                "bulan" -> Icons.Default.DarkMode
+                                "game/console" -> Icons.Default.VideogameAsset
+                                "olahraga" -> Icons.Default.FitnessCenter
+                                "buku" -> Icons.Default.MenuBook
+                                "gitar" -> Icons.Default.MusicNote
+                                "headphone" -> Icons.Default.Headphones
+                                "kamera" -> Icons.Default.CameraAlt
+                                "film" -> Icons.Default.Movie
+                                "mobil" -> Icons.Default.DirectionsCar
+                                "pesawat" -> Icons.Default.Flight
+                                "laptop" -> Icons.Default.Laptop
+                                "belanja" -> Icons.Default.ShoppingCart
+                                "tas" -> Icons.Default.Work
+                                else -> Icons.Default.Folder
+                            }
+                        } else {
+                            Icons.Default.Folder
                         }
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(icon, contentDescription = null, tint = EmeraldGreen, modifier = Modifier.size(20.dp))
+                                Text(text = customName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(120.dp)
+                                    .background(CardSlate, RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("Subtab kosong.", color = TextSecondary, fontSize = 13.sp)
+                            }
+                        }
+                        item { Spacer(modifier = Modifier.height(16.dp)) }
                     }
                 }
-                item { Spacer(modifier = Modifier.height(16.dp)) }
             }
         }
     }
