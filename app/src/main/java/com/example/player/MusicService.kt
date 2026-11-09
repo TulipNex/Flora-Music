@@ -378,13 +378,38 @@ class MusicService : MediaLibraryService() {
             app.playerController.syncQueueFromExternal(targetSongs, 0)
 
             targetSongs.map { s ->
-                val metadata = MediaMetadata.Builder()
+                val metadataBuilder = MediaMetadata.Builder()
                     .setTitle(s.title)
                     .setArtist(s.artist)
                     .setAlbumTitle(s.album)
-                    .setArtworkUri(if (!s.customCoverUri.isNullOrEmpty()) Uri.parse(s.customCoverUri) else null)
                     .setIsPlayable(true)
-                    .build()
+
+                if (!s.customCoverUri.isNullOrEmpty()) {
+                    try {
+                        val uri = Uri.parse(s.customCoverUri)
+                        if (s.customCoverUri.startsWith("content://")) {
+                            metadataBuilder.setArtworkUri(uri)
+                        } else {
+                            val file = File(uri.path ?: s.customCoverUri)
+                            if (file.exists()) {
+                                metadataBuilder.setArtworkData(file.readBytes(), MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        // ignore
+                    }
+                } else {
+                    val cachedFile = ArtworkCacheManager.getCachedFile(this, s.path)
+                    if (cachedFile != null && cachedFile.exists()) {
+                        try {
+                            metadataBuilder.setArtworkData(cachedFile.readBytes(), MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                        } catch (e: Exception) {
+                            // ignore
+                        }
+                    }
+                }
+
+                val metadata = metadataBuilder.build()
                 MediaItem.Builder()
                     .setMediaId(s.id.toString())
                     .setUri(Uri.fromFile(File(s.path)))

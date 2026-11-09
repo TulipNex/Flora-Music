@@ -153,18 +153,38 @@ class MusicPlayerController(
         _currentSong.value = song
 
         val mediaItems = playQueue.map { s ->
-            val artworkUri = if (!s.customCoverUri.isNullOrEmpty()) {
-                Uri.parse(s.customCoverUri)
-            } else {
-                com.example.utils.ArtworkCacheManager.getCachedFile(context, s.path)?.let { Uri.fromFile(it) }
-            }
-            val metadata = androidx.media3.common.MediaMetadata.Builder()
+            val metadataBuilder = androidx.media3.common.MediaMetadata.Builder()
                 .setTitle(s.title)
                 .setArtist(s.artist)
                 .setAlbumTitle(s.album)
-                .setArtworkUri(artworkUri)
                 .setIsPlayable(true)
-                .build()
+
+            if (!s.customCoverUri.isNullOrEmpty()) {
+                try {
+                    val uri = Uri.parse(s.customCoverUri)
+                    if (s.customCoverUri.startsWith("content://")) {
+                        metadataBuilder.setArtworkUri(uri)
+                    } else {
+                        val file = java.io.File(uri.path ?: s.customCoverUri)
+                        if (file.exists()) {
+                            metadataBuilder.setArtworkData(file.readBytes(), androidx.media3.common.MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                        }
+                    }
+                } catch (e: Exception) {
+                    // ignore
+                }
+            } else {
+                val cachedFile = com.example.utils.ArtworkCacheManager.getCachedFile(context, s.path)
+                if (cachedFile != null && cachedFile.exists()) {
+                    try {
+                        metadataBuilder.setArtworkData(cachedFile.readBytes(), androidx.media3.common.MediaMetadata.PICTURE_TYPE_FRONT_COVER)
+                    } catch (e: Exception) {
+                        // ignore
+                    }
+                }
+            }
+
+            val metadata = metadataBuilder.build()
             MediaItem.Builder()
                 .setMediaId(s.id.toString())
                 .setUri(Uri.fromFile(java.io.File(s.path)))
