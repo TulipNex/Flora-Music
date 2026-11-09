@@ -38,7 +38,6 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -1350,7 +1349,6 @@ fun FullScreenLyricsView(
                     var isAutoScrollLocked by remember { mutableStateOf(true) }
                     var userScrolled by remember { mutableStateOf(false) }
                     val density = LocalDensity.current
-                    val localView = androidx.compose.ui.platform.LocalView.current
 
                     LaunchedEffect(listState.isScrollInProgress) {
                         if (listState.isScrollInProgress) {
@@ -1386,28 +1384,9 @@ fun FullScreenLyricsView(
 
                     val baseFontSize = if (lyricsSameFontSize) (lyricsActiveFontSize * 1.05f) else lyricsActiveFontSize.toFloat()
 
-                    val fadeModifier = if (lyricsFadeEffect) {
-                        Modifier
-                            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                            .drawWithContent {
-                                drawContent()
-                                drawRect(
-                                    brush = Brush.verticalGradient(
-                                        0f to Color.Transparent,
-                                        0.08f to Color.Black,
-                                        0.92f to Color.Black,
-                                        1f to Color.Transparent
-                                    ),
-                                    blendMode = androidx.compose.ui.graphics.BlendMode.DstIn
-                                )
-                            }
-                    } else Modifier
-
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .then(fadeModifier),
+                        modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
                             top = with(density) { (listState.layoutInfo.viewportSize.height * 0.38f).coerceAtLeast(120f).toDp() },
                             bottom = with(density) { (listState.layoutInfo.viewportSize.height * 0.45f).coerceAtLeast(160f).toDp() },
@@ -1425,13 +1404,8 @@ fun FullScreenLyricsView(
                             val colorTarget = if (isAudioActive) activeColor else otherColor
                             val colorState by animateColorAsState(
                                 targetValue = colorTarget,
-                                animationSpec = tween(350, easing = CubicBezierEasing(0.4f, 0.2f, 0f, 1f)),
+                                animationSpec = tween(300, easing = LinearOutSlowInEasing),
                                 label = "LyrColor_$listIndex"
-                            )
-                            val scaleState by animateFloatAsState(
-                                targetValue = if (isAudioActive) 1f else 0.96f,
-                                animationSpec = tween(350, easing = CubicBezierEasing(0.4f, 0.2f, 0f, 1f)),
-                                label = "LyrScale_$listIndex"
                             )
 
                             val displayText = if (line.isBackground) {
@@ -1443,20 +1417,8 @@ fun FullScreenLyricsView(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .graphicsLayer {
-                                        scaleX = scaleState
-                                        scaleY = scaleState
-                                        transformOrigin = when (lyricsAlignment) {
-                                            "LEFT" -> androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
-                                            "RIGHT" -> androidx.compose.ui.graphics.TransformOrigin(1f, 0.5f)
-                                            else -> androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
-                                        }
-                                    }
                                     .clip(RoundedCornerShape(8.dp))
                                     .clickable {
-                                        try {
-                                            localView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                                        } catch (e: Throwable) {}
                                         isAutoScrollLocked = true
                                         userScrolled = false
                                         onSeekTo(line.timestampMs)
@@ -1705,7 +1667,6 @@ fun SynchronizedLyricsLayout(
             var isAutoScrollLocked by remember { mutableStateOf(true) }
             var userScrolled by remember { mutableStateOf(false) }
             val density = LocalDensity.current
-            val localView = androidx.compose.ui.platform.LocalView.current
 
             LaunchedEffect(listState.isScrollInProgress) {
                 if (listState.isScrollInProgress) {
@@ -1742,28 +1703,9 @@ fun SynchronizedLyricsLayout(
             Box(modifier = Modifier.fillMaxSize()) {
                 val baseFontSize = if (lyricsSameFontSize) (lyricsActiveFontSize * 1.05f) else lyricsActiveFontSize.toFloat()
 
-                val fadeModifier = if (lyricsFadeEffect) {
-                    Modifier
-                        .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(
-                                brush = Brush.verticalGradient(
-                                    0f to Color.Transparent,
-                                    0.08f to Color.Black,
-                                    0.92f to Color.Black,
-                                    1f to Color.Transparent
-                                ),
-                                blendMode = androidx.compose.ui.graphics.BlendMode.DstIn
-                            )
-                        }
-                } else Modifier
-
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .then(fadeModifier),
+                    modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         top = with(density) { (listState.layoutInfo.viewportSize.height * 0.35f).coerceAtLeast(100f).toDp() },
                         bottom = with(density) { (listState.layoutInfo.viewportSize.height * 0.45f).coerceAtLeast(150f).toDp() },
@@ -1781,13 +1723,8 @@ fun SynchronizedLyricsLayout(
                         val colorTarget = if (isAudioActive) activeColor else otherColor
                         val colorState by animateColorAsState(
                             targetValue = colorTarget,
-                            animationSpec = tween(350, easing = CubicBezierEasing(0.4f, 0.2f, 0f, 1f)),
+                            animationSpec = tween(300, easing = LinearOutSlowInEasing),
                             label = "LyrColorSync_$listIndex"
-                        )
-                        val scaleState by animateFloatAsState(
-                            targetValue = if (isAudioActive) 1f else 0.96f,
-                            animationSpec = tween(350, easing = CubicBezierEasing(0.4f, 0.2f, 0f, 1f)),
-                            label = "LyrScaleSync_$listIndex"
                         )
 
                         val displayText = if (line.isBackground) {
@@ -1799,20 +1736,8 @@ fun SynchronizedLyricsLayout(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .graphicsLayer {
-                                    scaleX = scaleState
-                                    scaleY = scaleState
-                                    transformOrigin = when (lyricsAlignment) {
-                                        "LEFT" -> androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
-                                        "RIGHT" -> androidx.compose.ui.graphics.TransformOrigin(1f, 0.5f)
-                                        else -> androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
-                                    }
-                                }
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable {
-                                    try {
-                                        localView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
-                                    } catch (e: Throwable) {}
                                     isAutoScrollLocked = true
                                     userScrolled = false
                                     onSeekTo(line.timestampMs)
