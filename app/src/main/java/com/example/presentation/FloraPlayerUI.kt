@@ -1343,30 +1343,31 @@ fun FullScreenLyricsView(
                 }
 
                 val listState = rememberLazyListState(initialFirstVisibleItemIndex = activeIndexClean)
-                var isAutoScrollLocked by remember { mutableStateOf(true) }
+                val isDragged by listState.interactionSource.collectIsDraggedAsState()
+                var userScrolledManually by remember { mutableStateOf(false) }
                 val density = LocalDensity.current
                 val screenHeight = LocalConfiguration.current.screenHeightDp.dp
                 val verticalPadding = screenHeight * 0.48f
 
-                // Pause auto-scroll when user manually scrolls; resume 3 seconds after scrolling stops
-                LaunchedEffect(listState.isScrollInProgress) {
-                    if (listState.isScrollInProgress) {
-                        isAutoScrollLocked = false
-                    } else {
+                // Pause auto-scroll when user manually drags with finger; resume 3 seconds after drag release
+                LaunchedEffect(isDragged) {
+                    if (isDragged) {
+                        userScrolledManually = true
+                    } else if (userScrolledManually) {
                         delay(3000)
-                        isAutoScrollLocked = true
+                        userScrolledManually = false
                     }
                 }
 
-                // Smoothly catch up with active line when song advances, only if not actively scrolling
+                // When song advances to the next lyric line, always resume auto-scroll if user is not holding the screen
                 LaunchedEffect(activeIndexClean) {
-                    if (!listState.isScrollInProgress) {
-                        isAutoScrollLocked = true
+                    if (!isDragged) {
+                        userScrolledManually = false
                     }
                 }
 
-                LaunchedEffect(activeIndexClean, isAutoScrollLocked, lyricsActivePosition) {
-                    if (isAutoScrollLocked && !listState.isScrollInProgress && activeIndexClean in lines.indices) {
+                LaunchedEffect(activeIndexClean, userScrolledManually, lyricsActivePosition) {
+                    if (!userScrolledManually && !isDragged && activeIndexClean in lines.indices) {
                         val layoutInfo = listState.layoutInfo
                         val viewportStart = layoutInfo.viewportStartOffset
                         val viewportEnd = layoutInfo.viewportEndOffset
@@ -1387,7 +1388,7 @@ fun FullScreenLyricsView(
                                 else -> viewportStart + (viewportHeight - itemInfo.size) / 2
                             }
                             val delta = itemInfo.offset - targetY
-                            if (kotlin.math.abs(delta) > 4) {
+                            if (kotlin.math.abs(delta) > 2) {
                                 listState.animateScrollBy(
                                     value = delta.toFloat(),
                                     animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)
@@ -1435,7 +1436,7 @@ fun FullScreenLyricsView(
                             lyricsAlignment = lyricsAlignment,
                             textAlign = align,
                             onSeekTo = { targetPos ->
-                                isAutoScrollLocked = true
+                                userScrolledManually = false
                                 onSeekTo(targetPos)
                             }
                         )
@@ -1639,30 +1640,31 @@ fun SynchronizedLyricsLayout(
             }
 
                 val listState = rememberLazyListState(initialFirstVisibleItemIndex = activeIndexClean)
-                var isAutoScrollLocked by remember { mutableStateOf(true) }
+                val isDragged by listState.interactionSource.collectIsDraggedAsState()
+                var userScrolledManually by remember { mutableStateOf(false) }
                 val density = LocalDensity.current
                 val screenHeight = LocalConfiguration.current.screenHeightDp.dp
                 val verticalPadding = screenHeight * 0.48f
 
-                // Pause auto-scroll when user manually scrolls; resume 3 seconds after scrolling stops
-                LaunchedEffect(listState.isScrollInProgress) {
-                    if (listState.isScrollInProgress) {
-                        isAutoScrollLocked = false
-                    } else {
+                // Pause auto-scroll when user manually drags with finger; resume 3 seconds after drag release
+                LaunchedEffect(isDragged) {
+                    if (isDragged) {
+                        userScrolledManually = true
+                    } else if (userScrolledManually) {
                         delay(3000)
-                        isAutoScrollLocked = true
+                        userScrolledManually = false
                     }
                 }
 
-                // Catch up when song advances, only if user is not actively scrolling
+                // Catch up when song advances, only if user is not actively holding the screen
                 LaunchedEffect(activeIndexClean) {
-                    if (!listState.isScrollInProgress) {
-                        isAutoScrollLocked = true
+                    if (!isDragged) {
+                        userScrolledManually = false
                     }
                 }
 
-                LaunchedEffect(activeIndexClean, isAutoScrollLocked, lyricsActivePosition) {
-                    if (isAutoScrollLocked && !listState.isScrollInProgress && activeIndexClean in lines.indices) {
+                LaunchedEffect(activeIndexClean, userScrolledManually, lyricsActivePosition) {
+                    if (!userScrolledManually && !isDragged && activeIndexClean in lines.indices) {
                         val layoutInfo = listState.layoutInfo
                         val viewportStart = layoutInfo.viewportStartOffset
                         val viewportEnd = layoutInfo.viewportEndOffset
@@ -1683,7 +1685,7 @@ fun SynchronizedLyricsLayout(
                                 else -> viewportStart + (viewportHeight - itemInfo.size) / 2
                             }
                             val delta = itemInfo.offset - targetY
-                            if (kotlin.math.abs(delta) > 4) {
+                            if (kotlin.math.abs(delta) > 2) {
                                 listState.animateScrollBy(
                                     value = delta.toFloat(),
                                     animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing)
@@ -1731,7 +1733,7 @@ fun SynchronizedLyricsLayout(
                             lyricsAlignment = lyricsAlignment,
                             textAlign = align,
                             onSeekTo = { targetPos ->
-                                isAutoScrollLocked = true
+                                userScrolledManually = false
                                 onSeekTo(targetPos)
                             }
                         )
