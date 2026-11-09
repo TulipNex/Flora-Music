@@ -399,7 +399,7 @@ class MusicService : MediaLibraryService() {
                         // ignore
                     }
                 } else {
-                    val cachedFile = ArtworkCacheManager.getCachedFile(this, s.path)
+                    val cachedFile = ArtworkCacheManager.getCachedFile(this@MusicService, s.path)
                     if (cachedFile != null && cachedFile.exists()) {
                         try {
                             metadataBuilder.setArtworkData(cachedFile.readBytes(), MediaMetadata.PICTURE_TYPE_FRONT_COVER)
