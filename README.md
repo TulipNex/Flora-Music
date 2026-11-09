@@ -1,4 +1,4 @@
-# 🌸 Flora Music
+# 🍀 Flora Music
 
 <div align="center">
 
