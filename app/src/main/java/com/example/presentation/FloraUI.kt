@@ -3313,6 +3313,22 @@ fun SettingsScreen(
     onBackClick: () -> Unit,
     onNavigate: (FloraScreen) -> Unit
 ) {
+    val context = LocalContext.current
+    val appVersionDisplay = remember(context) {
+        try {
+            val pInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+            val code = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                pInfo.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode.toLong()
+            }
+            "v${pInfo.versionName ?: com.example.BuildConfig.VERSION_NAME} (Build $code)"
+        } catch (e: Exception) {
+            "v${com.example.BuildConfig.VERSION_NAME} (Build ${com.example.BuildConfig.VERSION_CODE})"
+        }
+    }
+
     val isGridView by viewModel.isGridView.collectAsState()
 
     var showFolderBlacklistDialog by remember { mutableStateOf(false) }
@@ -3424,7 +3440,7 @@ fun SettingsScreen(
 
                 ListItem(
                     headlineContent = { Text("Versi Aplikasi", color = Color.White) },
-                    supportingContent = { Text("1.0.0", color = TextSecondary) },
+                    supportingContent = { Text(appVersionDisplay, color = TextSecondary) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
             }
