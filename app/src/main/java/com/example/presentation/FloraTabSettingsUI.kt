@@ -84,7 +84,7 @@ fun getTabIcon(tabName: String, customIconKey: String?): ImageVector {
         "Terbaru" -> Icons.Default.AutoAwesome
         "Playlist" -> Icons.Default.QueueMusic
         "Genre" -> Icons.Default.Folder
-        "Koleksi" -> Icons.Default.LibraryMusic
+        "Koleksi" -> Icons.Default.Folder
         else -> Icons.Default.Folder
     }
 }
