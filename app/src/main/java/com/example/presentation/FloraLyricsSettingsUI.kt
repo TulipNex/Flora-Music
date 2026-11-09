@@ -866,46 +866,44 @@ fun LyricsSettingsScreen(
                 )
                 
                 Text("Baris Aktif", color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                androidx.compose.foundation.lazy.LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(colorOptions.size) { index ->
-                        val (hex, _) = colorOptions[index]
+                    colorOptions.forEach { (hex, _) ->
                         val isSelected = lyricsActiveFontColor == hex
                         val parsedColor = try { Color(android.graphics.Color.parseColor(hex)) } catch (e: Exception) { Color.White }
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
-                                .background(parsedColor, RoundedCornerShape(24.dp))
+                                .size(36.dp)
+                                .background(parsedColor, RoundedCornerShape(18.dp))
                                 .clickable { viewModel.setLyricsActiveFontColor(hex) }
-                                .then(if (isSelected) Modifier.background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp)) else Modifier)
+                                .then(if (isSelected) Modifier.background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(18.dp)) else Modifier)
                         ) {
                             if (isSelected) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = if (parsedColor.luminance() > 0.5) Color.Black else Color.White, modifier = Modifier.align(Alignment.Center))
+                                Icon(Icons.Default.Check, contentDescription = null, tint = if (parsedColor.luminance() > 0.5) Color.Black else Color.White, modifier = Modifier.align(Alignment.Center).size(20.dp))
                             }
                         }
                     }
                     
-                    item {
-                        // Custom Color Option
-                        val isSelected = colorOptions.none { it.first == lyricsActiveFontColor }
-                        val activeColor = try { Color(android.graphics.Color.parseColor(lyricsActiveFontColor)) } catch (e: Exception) { Color.White }
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(if (isSelected) activeColor else CardSlate, RoundedCornerShape(24.dp))
-                                .clickable { 
-                                    showActiveColorDialog = true 
-                                }
-                                .then(if (isSelected) Modifier.background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp)) else Modifier),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (isSelected) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = if (activeColor.luminance() > 0.5) Color.Black else Color.White)
-                            } else {
-                                Icon(Icons.Default.Add, contentDescription = "Warna Kustom", tint = Color.White)
+                    // Custom Color Option
+                    val isSelected = colorOptions.none { it.first == lyricsActiveFontColor }
+                    val activeColor = try { Color(android.graphics.Color.parseColor(lyricsActiveFontColor)) } catch (e: Exception) { Color.White }
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(if (isSelected) activeColor else CardSlate, RoundedCornerShape(18.dp))
+                            .clickable { 
+                                showActiveColorDialog = true 
                             }
+                            .then(if (isSelected) Modifier.background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(18.dp)) else Modifier),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isSelected) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = if (activeColor.luminance() > 0.5) Color.Black else Color.White, modifier = Modifier.size(20.dp))
+                        } else {
+                            Icon(Icons.Default.Add, contentDescription = "Warna Kustom", tint = Color.White, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
@@ -913,46 +911,44 @@ fun LyricsSettingsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Text("Baris Tidak Aktif", color = Color.White, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
-                androidx.compose.foundation.lazy.LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(colorOptions.size) { index ->
-                        val (hex, _) = colorOptions[index]
+                    colorOptions.forEach { (hex, _) ->
                         val isSelected = lyricsOtherFontColor == hex
                         val parsedColor = try { Color(android.graphics.Color.parseColor(hex)) } catch (e: Exception) { Color.Gray }
                         Box(
                             modifier = Modifier
-                                .size(48.dp)
-                                .background(parsedColor, RoundedCornerShape(24.dp))
+                                .size(36.dp)
+                                .background(parsedColor, RoundedCornerShape(18.dp))
                                 .clickable { viewModel.setLyricsOtherFontColor(hex) }
-                                .then(if (isSelected) Modifier.background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp)) else Modifier)
+                                .then(if (isSelected) Modifier.background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(18.dp)) else Modifier)
                         ) {
                             if (isSelected) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = if (parsedColor.luminance() > 0.5) Color.Black else Color.White, modifier = Modifier.align(Alignment.Center))
+                                Icon(Icons.Default.Check, contentDescription = null, tint = if (parsedColor.luminance() > 0.5) Color.Black else Color.White, modifier = Modifier.align(Alignment.Center).size(20.dp))
                             }
                         }
                     }
                     
-                    item {
-                        // Custom Color Option
-                        val isSelected = colorOptions.none { it.first == lyricsOtherFontColor }
-                        val inactiveColor = try { Color(android.graphics.Color.parseColor(lyricsOtherFontColor)) } catch (e: Exception) { Color.Gray }
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .background(if (isSelected) inactiveColor else CardSlate, RoundedCornerShape(24.dp))
-                                .clickable { 
-                                    showInactiveColorDialog = true 
-                                }
-                                .then(if (isSelected) Modifier.background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp)) else Modifier),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (isSelected) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = if (inactiveColor.luminance() > 0.5) Color.Black else Color.White)
-                            } else {
-                                Icon(Icons.Default.Add, contentDescription = "Warna Kustom", tint = Color.White)
+                    // Custom Color Option
+                    val isSelected = colorOptions.none { it.first == lyricsOtherFontColor }
+                    val inactiveColor = try { Color(android.graphics.Color.parseColor(lyricsOtherFontColor)) } catch (e: Exception) { Color.Gray }
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(if (isSelected) inactiveColor else CardSlate, RoundedCornerShape(18.dp))
+                            .clickable { 
+                                showInactiveColorDialog = true 
                             }
+                            .then(if (isSelected) Modifier.background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(18.dp)) else Modifier),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isSelected) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = if (inactiveColor.luminance() > 0.5) Color.Black else Color.White, modifier = Modifier.size(20.dp))
+                        } else {
+                            Icon(Icons.Default.Add, contentDescription = "Warna Kustom", tint = Color.White, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
