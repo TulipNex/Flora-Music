@@ -38,6 +38,7 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -1264,261 +1265,239 @@ fun FullScreenLyricsView(
                 .width(40.dp)
                 .align(Alignment.CenterEnd)
                 .background(androidx.compose.ui.graphics.Color.Transparent)
-                .zIndex(1f) // Ensure it sits on top of the lyrics to intercept drag
+                .zIndex(1f)
                 .lyricsEdgeDrag()
         )
 
-        // Center Content of the lyrics
-        Column(
+        // Top Area for dragging to dismiss (invisible, clean)
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(top = 8.dp, bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxWidth()
+                .height(48.dp)
+                .align(Alignment.TopCenter)
+                .background(androidx.compose.ui.graphics.Color.Transparent)
+                .zIndex(1f)
+                .lyricsEdgeDrag()
+        )
+
+        // Edge-to-Edge Clean Lyrics Content (Gramophone style)
+        Box(
+            modifier = Modifier
+                .fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            // Dismiss Drag Handle & Header
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
-                    .lyricsEdgeDrag(),
-                contentAlignment = Alignment.Center
-            ) {
-                IconButton(
-                    onClick = onCloseLyrics,
-                    modifier = Modifier.align(Alignment.CenterStart).size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Tutup Lirik",
-                        tint = Color.White.copy(alpha = 0.85f),
-                        modifier = Modifier.size(28.dp)
-                    )
+            when (val state = parsedLyrics) {
+                is LyricState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(48.dp)
+                        )
+                    }
                 }
-
-                Box(
-                    modifier = Modifier
-                        .width(42.dp)
-                        .height(4.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.35f))
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                when (val state = parsedLyrics) {
-                    is LyricState.Loading -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            androidx.compose.material3.CircularProgressIndicator(
-                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f),
-                                modifier = Modifier.size(48.dp)
-                            )
-                        }
+                is LyricState.None -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "Lirik tidak tersedia.",
+                            fontSize = 18.sp,
+                            color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f),
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center
+                        )
                     }
-                    is LyricState.None -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                }
+                is LyricState.Static -> {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(vertical = 24.dp),
+                        horizontalAlignment = colAlign,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        item {
                             Text(
-                                text = "Lirik tidak tersedia.",
+                                text = state.text,
+                                fontFamily = customFontFamily,
                                 fontSize = 18.sp,
-                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.5f),
+                                color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f),
                                 fontWeight = FontWeight.Medium,
-                                textAlign = TextAlign.Center
+                                lineHeight = 32.sp,
+                                textAlign = align,
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = lyricsMargin.dp)
                             )
                         }
                     }
-                    is LyricState.Static -> {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(vertical = 24.dp),
-                            horizontalAlignment = colAlign,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            item {
-                                Text(
-                                    text = state.text,
-                                    fontFamily = customFontFamily,
-                                    fontSize = 18.sp,
-                                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.9f),
-                                    fontWeight = FontWeight.Medium,
-                                    lineHeight = 32.sp,
-                                    textAlign = align,
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = lyricsMargin.dp)
+                }
+                is LyricState.Synced -> {
+                    val lines = state.lines
+                    val activeIndex = remember(lines, playbackPosition) {
+                        LyricsParser.getActiveLineIndex(lines, playbackPosition)
+                    }
+                    val activeIndexClean = if (activeIndex == -1) 0 else activeIndex
+                    val activeLineIndices = remember(activeIndex, lines) {
+                        val set = mutableSetOf<Int>()
+                        if (activeIndex != -1) {
+                            set.add(activeIndex)
+                            val activeLine = lines[activeIndex]
+                            if (activeLine.isBackground) {
+                                val pairedMain = (activeIndex - 1 downTo 0).firstOrNull { !lines[it].isBackground }
+                                if (pairedMain != null) set.add(pairedMain)
+                            }
+                        }
+                        set
+                    }
+
+                    val listState = rememberLazyListState()
+                    var isAutoScrollLocked by remember { mutableStateOf(true) }
+                    var userScrolled by remember { mutableStateOf(false) }
+                    val density = LocalDensity.current
+                    val localView = androidx.compose.ui.platform.LocalView.current
+
+                    LaunchedEffect(listState.isScrollInProgress) {
+                        if (listState.isScrollInProgress) {
+                            userScrolled = true
+                            isAutoScrollLocked = false
+                        } else if (userScrolled) {
+                            delay(3000)
+                            userScrolled = false
+                            isAutoScrollLocked = true
+                        }
+                    }
+
+                    // Gramophone behavior: When the song advances to the next lyric line,
+                    // smoothly resume auto-scroll tracking automatically
+                    LaunchedEffect(activeIndexClean) {
+                        userScrolled = false
+                        isAutoScrollLocked = true
+                    }
+
+                    LaunchedEffect(activeIndexClean, isAutoScrollLocked, lyricsActivePosition) {
+                        if (isAutoScrollLocked && activeIndexClean in lines.indices) {
+                            val viewportHeight = listState.layoutInfo.viewportSize.height
+                            val targetOffset = if (viewportHeight > 0) {
+                                when (lyricsActivePosition) {
+                                    "TOP" -> -with(density) { 36.dp.roundToPx() }
+                                    "BOTTOM" -> -(viewportHeight - with(density) { 140.dp.roundToPx() })
+                                    else -> -(viewportHeight / 2 - with(density) { 36.dp.roundToPx() })
+                                }
+                            } else 0
+                            listState.animateScrollToItem(activeIndexClean, targetOffset)
+                        }
+                    }
+
+                    val baseFontSize = if (lyricsSameFontSize) (lyricsActiveFontSize * 1.05f) else lyricsActiveFontSize.toFloat()
+
+                    val fadeModifier = if (lyricsFadeEffect) {
+                        Modifier
+                            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        0f to Color.Transparent,
+                                        0.08f to Color.Black,
+                                        0.92f to Color.Black,
+                                        1f to Color.Transparent
+                                    ),
+                                    blendMode = androidx.compose.ui.graphics.BlendMode.DstIn
                                 )
                             }
-                        }
-                    }
-                    is LyricState.Synced -> {
-                        val lines = state.lines
-                        val activeIndex = remember(lines, playbackPosition) {
-                            LyricsParser.getActiveLineIndex(lines, playbackPosition)
-                        }
-                        val activeIndexClean = if (activeIndex == -1) 0 else activeIndex
-                        val activeLineIndices = remember(activeIndex, lines) {
-                            val set = mutableSetOf<Int>()
-                            if (activeIndex != -1) {
-                                set.add(activeIndex)
-                                val activeLine = lines[activeIndex]
-                                if (activeLine.isBackground) {
-                                    val pairedMain = (activeIndex - 1 downTo 0).firstOrNull { !lines[it].isBackground }
-                                    if (pairedMain != null) set.add(pairedMain)
-                                }
-                            }
-                            set
-                        }
+                    } else Modifier
 
-                        val listState = rememberLazyListState()
-                        var isAutoScrollLocked by remember { mutableStateOf(true) }
-                        var userScrolled by remember { mutableStateOf(false) }
-                        val density = LocalDensity.current
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .then(fadeModifier),
+                        contentPadding = PaddingValues(
+                            top = with(density) { (listState.layoutInfo.viewportSize.height * 0.38f).coerceAtLeast(120f).toDp() },
+                            bottom = with(density) { (listState.layoutInfo.viewportSize.height * 0.45f).coerceAtLeast(160f).toDp() },
+                            start = lyricsMargin.dp,
+                            end = lyricsMargin.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(lyricsItemSpacing.dp),
+                        horizontalAlignment = colAlign
+                    ) {
+                        itemsIndexed(
+                            items = lines,
+                            key = { idx, item -> "$idx-${item.timestampMs}" }
+                        ) { listIndex, line ->
+                            val isAudioActive = activeLineIndices.contains(listIndex)
+                            val colorTarget = if (isAudioActive) activeColor else otherColor
+                            val colorState by animateColorAsState(
+                                targetValue = colorTarget,
+                                animationSpec = tween(350, easing = CubicBezierEasing(0.4f, 0.2f, 0f, 1f)),
+                                label = "LyrColor_$listIndex"
+                            )
+                            val scaleState by animateFloatAsState(
+                                targetValue = if (isAudioActive) 1f else 0.96f,
+                                animationSpec = tween(350, easing = CubicBezierEasing(0.4f, 0.2f, 0f, 1f)),
+                                label = "LyrScale_$listIndex"
+                            )
 
-                        LaunchedEffect(listState.isScrollInProgress) {
-                            if (listState.isScrollInProgress) {
-                                userScrolled = true
-                                isAutoScrollLocked = false
-                            } else if (userScrolled) {
-                                delay(3500)
-                                userScrolled = false
-                                isAutoScrollLocked = true
-                            }
-                        }
-
-                        LaunchedEffect(activeIndexClean, isAutoScrollLocked, lyricsActivePosition) {
-                            if (isAutoScrollLocked && activeIndexClean in lines.indices) {
-                                val viewportHeight = listState.layoutInfo.viewportSize.height
-                                val targetOffset = if (viewportHeight > 0) {
-                                    when (lyricsActivePosition) {
-                                        "TOP" -> -with(density) { 36.dp.roundToPx() }
-                                        "BOTTOM" -> -(viewportHeight - with(density) { 140.dp.roundToPx() })
-                                        else -> -(viewportHeight / 2 - with(density) { 36.dp.roundToPx() })
-                                    }
-                                } else 0
-                                listState.animateScrollToItem(activeIndexClean, targetOffset)
-                            }
-                        }
-
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            val baseFontSize = if (lyricsSameFontSize) (lyricsActiveFontSize * 1.05f) else lyricsActiveFontSize.toFloat()
-
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(
-                                    top = with(density) { (listState.layoutInfo.viewportSize.height * 0.35f).coerceAtLeast(100f).toDp() },
-                                    bottom = with(density) { (listState.layoutInfo.viewportSize.height * 0.45f).coerceAtLeast(150f).toDp() },
-                                    start = lyricsMargin.dp,
-                                    end = lyricsMargin.dp
-                                ),
-                                verticalArrangement = Arrangement.spacedBy(lyricsItemSpacing.dp),
-                                horizontalAlignment = colAlign
-                            ) {
-                                itemsIndexed(
-                                    items = lines,
-                                    key = { idx, item -> "$idx-${item.timestampMs}" }
-                                ) { listIndex, line ->
-                                    val isAudioActive = activeLineIndices.contains(listIndex)
-                                    val colorTarget = if (isAudioActive) activeColor else otherColor
-                                    val colorState by animateColorAsState(
-                                        targetValue = colorTarget,
-                                        animationSpec = tween(300, easing = LinearOutSlowInEasing),
-                                        label = "LyrColor_$listIndex"
-                                    )
-
-                                    val displayText = if (line.isBackground) {
-                                        line.text.replace(Regex("^\\s*\\(|\\)\\s*$"), "").trim()
-                                    } else {
-                                        line.text.trim()
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .clickable {
-                                                isAutoScrollLocked = true
-                                                userScrolled = false
-                                                onSeekTo(line.timestampMs)
-                                            }
-                                            .padding(vertical = 4.dp),
-                                        contentAlignment = when (lyricsAlignment) {
-                                            "LEFT" -> Alignment.CenterStart
-                                            "RIGHT" -> Alignment.CenterEnd
-                                            else -> Alignment.Center
-                                        }
-                                    ) {
-                                        if (line.words.isNotEmpty()) {
-                                            FloraWordLevelLyrics(
-                                                mainText = displayText,
-                                                words = line.words,
-                                                isActiveLine = isAudioActive,
-                                                playbackPosition = playbackPosition,
-                                                isPlaying = isPlaying,
-                                                lyricStyle = TextStyle(
-                                                    fontFamily = customFontFamily,
-                                                    fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    textAlign = align,
-                                                    lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp
-                                                ),
-                                                lineColor = otherColor,
-                                                expressiveAccent = activeColor,
-                                                isBackground = line.isBackground,
-                                                focusedAlpha = 0.5f,
-                                                alignment = align
-                                            )
-                                        } else {
-                                            Text(
-                                                text = displayText,
-                                                fontFamily = customFontFamily,
-                                                fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = colorState,
-                                                textAlign = align,
-                                                lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp,
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
-                                    }
-                                }
+                            val displayText = if (line.isBackground) {
+                                line.text.replace(Regex("^\\s*\\(|\\)\\s*$"), "").trim()
+                            } else {
+                                line.text.trim()
                             }
 
-                            androidx.compose.animation.AnimatedVisibility(
-                                visible = !isAutoScrollLocked && userScrolled,
-                                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(),
-                                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(),
+                            Box(
                                 modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(bottom = 24.dp)
-                            ) {
-                                Button(
-                                    onClick = {
+                                    .fillMaxWidth()
+                                    .graphicsLayer {
+                                        scaleX = scaleState
+                                        scaleY = scaleState
+                                        transformOrigin = when (lyricsAlignment) {
+                                            "LEFT" -> androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                                            "RIGHT" -> androidx.compose.ui.graphics.TransformOrigin(1f, 0.5f)
+                                            else -> androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
+                                        }
+                                    }
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        try {
+                                            localView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                                        } catch (e: Throwable) {}
                                         isAutoScrollLocked = true
                                         userScrolled = false
-                                    },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = androidx.compose.ui.graphics.Color(0xFF1E293B).copy(alpha = 0.92f),
-                                        contentColor = EmeraldLight
-                                    ),
-                                    shape = RoundedCornerShape(20.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldGreen.copy(alpha = 0.5f)),
-                                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
-                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Sync,
-                                        contentDescription = null,
-                                        tint = EmeraldGreen,
-                                        modifier = Modifier.size(16.dp)
+                                        onSeekTo(line.timestampMs)
+                                    }
+                                    .padding(vertical = 4.dp),
+                                contentAlignment = when (lyricsAlignment) {
+                                    "LEFT" -> Alignment.CenterStart
+                                    "RIGHT" -> Alignment.CenterEnd
+                                    else -> Alignment.Center
+                                }
+                            ) {
+                                if (line.words.isNotEmpty()) {
+                                    FloraWordLevelLyrics(
+                                        mainText = displayText,
+                                        words = line.words,
+                                        isActiveLine = isAudioActive,
+                                        playbackPosition = playbackPosition,
+                                        isPlaying = isPlaying,
+                                        lyricStyle = TextStyle(
+                                            fontFamily = customFontFamily,
+                                            fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = align,
+                                            lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp
+                                        ),
+                                        lineColor = otherColor,
+                                        expressiveAccent = activeColor,
+                                        isBackground = line.isBackground,
+                                        focusedAlpha = 0.5f,
+                                        alignment = align
                                     )
-                                    Spacer(modifier = Modifier.width(6.dp))
+                                } else {
                                     Text(
-                                        text = "Lompat ke lirik aktif",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color.White
+                                        text = displayText,
+                                        fontFamily = customFontFamily,
+                                        fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = colorState,
+                                        textAlign = align,
+                                        lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp,
+                                        modifier = Modifier.fillMaxWidth()
                                     )
                                 }
                             }
@@ -1726,16 +1705,24 @@ fun SynchronizedLyricsLayout(
             var isAutoScrollLocked by remember { mutableStateOf(true) }
             var userScrolled by remember { mutableStateOf(false) }
             val density = LocalDensity.current
+            val localView = androidx.compose.ui.platform.LocalView.current
 
             LaunchedEffect(listState.isScrollInProgress) {
                 if (listState.isScrollInProgress) {
                     userScrolled = true
                     isAutoScrollLocked = false
                 } else if (userScrolled) {
-                    delay(3500)
+                    delay(3000)
                     userScrolled = false
                     isAutoScrollLocked = true
                 }
+            }
+
+            // Gramophone behavior: When the song advances to the next lyric line,
+            // smoothly resume auto-scroll tracking automatically
+            LaunchedEffect(activeIndexClean) {
+                userScrolled = false
+                isAutoScrollLocked = true
             }
 
             LaunchedEffect(activeIndexClean, isAutoScrollLocked, lyricsActivePosition) {
@@ -1755,9 +1742,28 @@ fun SynchronizedLyricsLayout(
             Box(modifier = Modifier.fillMaxSize()) {
                 val baseFontSize = if (lyricsSameFontSize) (lyricsActiveFontSize * 1.05f) else lyricsActiveFontSize.toFloat()
 
+                val fadeModifier = if (lyricsFadeEffect) {
+                    Modifier
+                        .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    0f to Color.Transparent,
+                                    0.08f to Color.Black,
+                                    0.92f to Color.Black,
+                                    1f to Color.Transparent
+                                ),
+                                blendMode = androidx.compose.ui.graphics.BlendMode.DstIn
+                            )
+                        }
+                } else Modifier
+
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .then(fadeModifier),
                     contentPadding = PaddingValues(
                         top = with(density) { (listState.layoutInfo.viewportSize.height * 0.35f).coerceAtLeast(100f).toDp() },
                         bottom = with(density) { (listState.layoutInfo.viewportSize.height * 0.45f).coerceAtLeast(150f).toDp() },
@@ -1775,8 +1781,13 @@ fun SynchronizedLyricsLayout(
                         val colorTarget = if (isAudioActive) activeColor else otherColor
                         val colorState by animateColorAsState(
                             targetValue = colorTarget,
-                            animationSpec = tween(300, easing = LinearOutSlowInEasing),
+                            animationSpec = tween(350, easing = CubicBezierEasing(0.4f, 0.2f, 0f, 1f)),
                             label = "LyrColorSync_$listIndex"
+                        )
+                        val scaleState by animateFloatAsState(
+                            targetValue = if (isAudioActive) 1f else 0.96f,
+                            animationSpec = tween(350, easing = CubicBezierEasing(0.4f, 0.2f, 0f, 1f)),
+                            label = "LyrScaleSync_$listIndex"
                         )
 
                         val displayText = if (line.isBackground) {
@@ -1788,8 +1799,20 @@ fun SynchronizedLyricsLayout(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .graphicsLayer {
+                                    scaleX = scaleState
+                                    scaleY = scaleState
+                                    transformOrigin = when (lyricsAlignment) {
+                                        "LEFT" -> androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
+                                        "RIGHT" -> androidx.compose.ui.graphics.TransformOrigin(1f, 0.5f)
+                                        else -> androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.5f)
+                                    }
+                                }
                                 .clip(RoundedCornerShape(8.dp))
                                 .clickable {
+                                    try {
+                                        localView.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP)
+                                    } catch (e: Throwable) {}
                                     isAutoScrollLocked = true
                                     userScrolled = false
                                     onSeekTo(line.timestampMs)
