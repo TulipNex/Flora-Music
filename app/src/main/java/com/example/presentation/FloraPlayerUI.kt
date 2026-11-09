@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -80,6 +81,7 @@ import kotlin.math.roundToInt
 
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.yield
 import kotlinx.coroutines.flow.first
 import androidx.compose.ui.draw.alpha
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -1345,10 +1347,12 @@ fun FullScreenLyricsView(
                         set
                     }
 
-                    val listState = rememberLazyListState()
+                    val listState = rememberLazyListState(initialFirstVisibleItemIndex = activeIndexClean)
                     var isAutoScrollLocked by remember { mutableStateOf(true) }
                     var userScrolled by remember { mutableStateOf(false) }
                     val density = LocalDensity.current
+                    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+                    val verticalPadding = screenHeight * 0.48f
 
                     LaunchedEffect(listState.isScrollInProgress) {
                         if (listState.isScrollInProgress) {
@@ -1370,15 +1374,33 @@ fun FullScreenLyricsView(
 
                     LaunchedEffect(activeIndexClean, isAutoScrollLocked, lyricsActivePosition) {
                         if (isAutoScrollLocked && activeIndexClean in lines.indices) {
-                            val viewportHeight = listState.layoutInfo.viewportSize.height
-                            val targetOffset = if (viewportHeight > 0) {
-                                when (lyricsActivePosition) {
-                                    "TOP" -> -with(density) { 36.dp.roundToPx() }
-                                    "BOTTOM" -> -(viewportHeight - with(density) { 140.dp.roundToPx() })
-                                    else -> -(viewportHeight / 2 - with(density) { 36.dp.roundToPx() })
+                            val layoutInfo = listState.layoutInfo
+                            val viewportStart = layoutInfo.viewportStartOffset
+                            val viewportEnd = layoutInfo.viewportEndOffset
+                            val viewportHeight = viewportEnd - viewportStart
+                            if (viewportHeight <= 0) return@LaunchedEffect
+
+                            var itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.index == activeIndexClean }
+                            if (itemInfo == null) {
+                                listState.scrollToItem(activeIndexClean)
+                                yield()
+                                itemInfo = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == activeIndexClean }
+                            }
+
+                            if (itemInfo != null) {
+                                val targetY = when (lyricsActivePosition) {
+                                    "TOP" -> viewportStart + with(density) { 80.dp.roundToPx() }
+                                    "BOTTOM" -> viewportEnd - itemInfo.size - with(density) { 160.dp.roundToPx() }
+                                    else -> viewportStart + (viewportHeight - itemInfo.size) / 2
                                 }
-                            } else 0
-                            listState.animateScrollToItem(activeIndexClean, targetOffset)
+                                val delta = itemInfo.offset - targetY
+                                if (kotlin.math.abs(delta) > 4) {
+                                    listState.animateScrollBy(
+                                        value = delta.toFloat(),
+                                        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                                    )
+                                }
+                            }
                         }
                     }
 
@@ -1388,8 +1410,8 @@ fun FullScreenLyricsView(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            top = with(density) { (listState.layoutInfo.viewportSize.height * 0.38f).coerceAtLeast(120f).toDp() },
-                            bottom = with(density) { (listState.layoutInfo.viewportSize.height * 0.45f).coerceAtLeast(160f).toDp() },
+                            top = verticalPadding,
+                            bottom = verticalPadding,
                             start = lyricsMargin.dp,
                             end = lyricsMargin.dp
                         ),
@@ -1663,10 +1685,12 @@ fun SynchronizedLyricsLayout(
                 set
             }
 
-            val listState = rememberLazyListState()
+            val listState = rememberLazyListState(initialFirstVisibleItemIndex = activeIndexClean)
             var isAutoScrollLocked by remember { mutableStateOf(true) }
             var userScrolled by remember { mutableStateOf(false) }
             val density = LocalDensity.current
+            val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+            val verticalPadding = screenHeight * 0.48f
 
             LaunchedEffect(listState.isScrollInProgress) {
                 if (listState.isScrollInProgress) {
@@ -1688,15 +1712,33 @@ fun SynchronizedLyricsLayout(
 
             LaunchedEffect(activeIndexClean, isAutoScrollLocked, lyricsActivePosition) {
                 if (isAutoScrollLocked && activeIndexClean in lines.indices) {
-                    val viewportHeight = listState.layoutInfo.viewportSize.height
-                    val targetOffset = if (viewportHeight > 0) {
-                        when (lyricsActivePosition) {
-                            "TOP" -> -with(density) { 36.dp.roundToPx() }
-                            "BOTTOM" -> -(viewportHeight - with(density) { 140.dp.roundToPx() })
-                            else -> -(viewportHeight / 2 - with(density) { 36.dp.roundToPx() })
+                    val layoutInfo = listState.layoutInfo
+                    val viewportStart = layoutInfo.viewportStartOffset
+                    val viewportEnd = layoutInfo.viewportEndOffset
+                    val viewportHeight = viewportEnd - viewportStart
+                    if (viewportHeight <= 0) return@LaunchedEffect
+
+                    var itemInfo = layoutInfo.visibleItemsInfo.firstOrNull { it.index == activeIndexClean }
+                    if (itemInfo == null) {
+                        listState.scrollToItem(activeIndexClean)
+                        yield()
+                        itemInfo = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == activeIndexClean }
+                    }
+
+                    if (itemInfo != null) {
+                        val targetY = when (lyricsActivePosition) {
+                            "TOP" -> viewportStart + with(density) { 80.dp.roundToPx() }
+                            "BOTTOM" -> viewportEnd - itemInfo.size - with(density) { 160.dp.roundToPx() }
+                            else -> viewportStart + (viewportHeight - itemInfo.size) / 2
                         }
-                    } else 0
-                    listState.animateScrollToItem(activeIndexClean, targetOffset)
+                        val delta = itemInfo.offset - targetY
+                        if (kotlin.math.abs(delta) > 4) {
+                            listState.animateScrollBy(
+                                value = delta.toFloat(),
+                                animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)
+                            )
+                        }
+                    }
                 }
             }
 
@@ -1707,8 +1749,8 @@ fun SynchronizedLyricsLayout(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        top = with(density) { (listState.layoutInfo.viewportSize.height * 0.35f).coerceAtLeast(100f).toDp() },
-                        bottom = with(density) { (listState.layoutInfo.viewportSize.height * 0.45f).coerceAtLeast(150f).toDp() },
+                        top = verticalPadding,
+                        bottom = verticalPadding,
                         start = lyricsMargin.dp,
                         end = lyricsMargin.dp
                     ),
