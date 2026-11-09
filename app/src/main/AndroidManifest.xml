@@ -57,12 +57,14 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="androidx.media3.session.MediaLibraryService" />
+                <action android:name="androidx.media3.session.MediaSessionService" />
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
             <intent-filter>
                 <action android:name="com.example.flora.PLAY_PAUSE" />
                 <action android:name="com.example.flora.NEXT" />
                 <action android:name="com.example.flora.PREVIOUS" />
+                <action android:name="com.example.flora.FAVORITE" />
                 <action android:name="com.example.flora.STOP" />
             </intent-filter>
         </service>

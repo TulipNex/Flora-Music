@@ -11,6 +11,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
+import android.support.v4.media.session.MediaSessionCompat
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -117,8 +118,18 @@ class MusicService : MediaLibraryService() {
             }
         }
 
+        val sessionActivityPendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            },
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         mediaLibrarySession = MediaLibrarySession.Builder(this, player, callback)
             .setId("FloraMusicService")
+            .setSessionActivity(sessionActivityPendingIntent)
             .build()
 
         // Observe playback state and current song to automatically update rich notification
@@ -145,6 +156,17 @@ class MusicService : MediaLibraryService() {
             }
             ACTION_PREVIOUS -> {
                 app.playerController.previous()
+            }
+            ACTION_FAVORITE -> {
+                val currentSong = app.playerController.currentSong.value
+                if (currentSong != null) {
+                    val newFav = !currentSong.isFavorite
+                    currentSong.isFavorite = newFav
+                    serviceScope.launch {
+                        app.repository.setSongFavorite(currentSong.id, newFav)
+                        updateNotification(currentSong, app.playerController.isPlaying.value)
+                    }
+                }
             }
             ACTION_STOP -> {
                 if (app.playerController.isPlaying.value) {
@@ -188,10 +210,11 @@ class MusicService : MediaLibraryService() {
         val artist = song?.artist ?: "Pemutar Musik"
         val album = song?.album ?: ""
 
-        val prevIntent = createPendingIntent(ACTION_PREVIOUS, 1)
-        val playPauseIntent = createPendingIntent(ACTION_PLAY_PAUSE, 2)
-        val nextIntent = createPendingIntent(ACTION_NEXT, 3)
-        val stopIntent = createPendingIntent(ACTION_STOP, 4)
+        val favIntent = createPendingIntent(ACTION_FAVORITE, 1)
+        val prevIntent = createPendingIntent(ACTION_PREVIOUS, 2)
+        val playPauseIntent = createPendingIntent(ACTION_PLAY_PAUSE, 3)
+        val nextIntent = createPendingIntent(ACTION_NEXT, 4)
+        val stopIntent = createPendingIntent(ACTION_STOP, 5)
 
         val contentIntent = PendingIntent.getActivity(
             this,
@@ -204,10 +227,18 @@ class MusicService : MediaLibraryService() {
 
         val artworkBitmap = loadArtworkBitmap(song)
 
+        val isFav = song?.isFavorite == true
+        val favIcon = if (isFav) com.example.R.drawable.ic_favorite else com.example.R.drawable.ic_favorite_border
+        val favTitle = if (isFav) "Unlike" else "Like"
+
         val mediaStyle = androidx.media.app.NotificationCompat.MediaStyle()
-            .setShowActionsInCompactView(0, 1, 2)
+            .setShowActionsInCompactView(1, 2, 3) // Previous (1), Play/Pause (2), Next (3)
             .setShowCancelButton(true)
             .setCancelButtonIntent(stopIntent)
+
+        mediaLibrarySession?.sessionCompatToken?.let { token ->
+            mediaStyle.setMediaSession(token)
+        }
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(if (isPlaying) com.example.R.drawable.ic_play_arrow else com.example.R.drawable.ic_pause)
@@ -217,9 +248,11 @@ class MusicService : MediaLibraryService() {
             .setLargeIcon(artworkBitmap)
             .setContentIntent(contentIntent)
             .setStyle(mediaStyle)
+            .setColorized(true)
             .setOngoing(isPlaying)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setPriority(NotificationCompat.PRIORITY_LOW)
+            .addAction(favIcon, favTitle, favIntent)
             .addAction(com.example.R.drawable.ic_skip_previous, "Previous", prevIntent)
             .addAction(
                 if (isPlaying) com.example.R.drawable.ic_pause else com.example.R.drawable.ic_play_arrow,
@@ -227,6 +260,7 @@ class MusicService : MediaLibraryService() {
                 playPauseIntent
             )
             .addAction(com.example.R.drawable.ic_skip_next, "Next", nextIntent)
+            .addAction(com.example.R.drawable.ic_dismiss, "Stop", stopIntent)
 
         return builder.build()
     }
@@ -237,22 +271,63 @@ class MusicService : MediaLibraryService() {
             if (!song.customCoverUri.isNullOrEmpty()) {
                 val uri = Uri.parse(song.customCoverUri)
                 contentResolver.openInputStream(uri)?.use { stream ->
-                    BitmapFactory.decodeStream(stream)
+                    decodeSampledBitmap(stream.readBytes())
                 }
             } else {
                 val cachedFile = ArtworkCacheManager.getCachedFile(this, song.path)
                 if (cachedFile != null && cachedFile.exists()) {
-                    BitmapFactory.decodeFile(cachedFile.absolutePath)
+                    decodeSampledBitmap(cachedFile.absolutePath)
                 } else {
                     val bytes = MusicScanner.getArtworkBytes(song.path)
                     if (bytes != null) {
-                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                        decodeSampledBitmap(bytes)
                     } else null
                 }
             }
         } catch (e: Exception) {
             null
         }
+    }
+
+    private fun decodeSampledBitmap(data: ByteArray, reqWidth: Int = 512, reqHeight: Int = 512): Bitmap? {
+        return try {
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            BitmapFactory.decodeByteArray(data, 0, data.size, options)
+            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
+            options.inJustDecodeBounds = false
+            BitmapFactory.decodeByteArray(data, 0, data.size, options)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun decodeSampledBitmap(path: String, reqWidth: Int = 512, reqHeight: Int = 512): Bitmap? {
+        return try {
+            val options = BitmapFactory.Options().apply {
+                inJustDecodeBounds = true
+            }
+            BitmapFactory.decodeFile(path, options)
+            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight)
+            options.inJustDecodeBounds = false
+            BitmapFactory.decodeFile(path, options)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+        val (height: Int, width: Int) = options.outHeight to options.outWidth
+        var inSampleSize = 1
+        if (height > reqHeight || width > reqWidth) {
+            val halfHeight: Int = height / 2
+            val halfWidth: Int = width / 2
+            while ((halfHeight / inSampleSize) >= reqHeight && (halfWidth / inSampleSize) >= reqWidth) {
+                inSampleSize *= 2
+            }
+        }
+        return inSampleSize
     }
 
     private fun createPendingIntent(action: String, requestCode: Int): PendingIntent {
@@ -337,6 +412,7 @@ class MusicService : MediaLibraryService() {
         const val ACTION_PLAY_PAUSE = "com.example.flora.PLAY_PAUSE"
         const val ACTION_NEXT = "com.example.flora.NEXT"
         const val ACTION_PREVIOUS = "com.example.flora.PREVIOUS"
+        const val ACTION_FAVORITE = "com.example.flora.FAVORITE"
         const val ACTION_STOP = "com.example.flora.STOP"
     }
 }

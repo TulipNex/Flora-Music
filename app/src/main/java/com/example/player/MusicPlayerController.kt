@@ -158,6 +158,7 @@ class MusicPlayerController(
                 .setArtist(s.artist)
                 .setAlbumTitle(s.album)
                 .setArtworkUri(artworkUri)
+                .setIsPlayable(true)
                 .build()
             MediaItem.Builder()
                 .setMediaId(s.id.toString())
