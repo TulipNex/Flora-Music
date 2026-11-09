@@ -79,6 +79,7 @@ import androidx.compose.ui.geometry.Offset
 import kotlin.math.roundToInt
 
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import androidx.compose.ui.draw.alpha
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -1271,10 +1272,38 @@ fun FullScreenLyricsView(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(top = 8.dp, bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            // Dismiss Drag Handle & Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .lyricsEdgeDrag(),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(
+                    onClick = onCloseLyrics,
+                    modifier = Modifier.align(Alignment.CenterStart).size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Tutup Lirik",
+                        tint = Color.White.copy(alpha = 0.85f),
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .width(42.dp)
+                        .height(4.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.35f))
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -1341,211 +1370,160 @@ fun FullScreenLyricsView(
                             set
                         }
 
+                        val listState = rememberLazyListState()
                         var isAutoScrollLocked by remember { mutableStateOf(true) }
-                        var userManualOffset by remember { mutableFloatStateOf(0f) }
-                        var flingJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-                        val velocityTracker = remember { VelocityTracker() }
-                        val decayAnimSpec = remember { exponentialDecay<Float>(frictionMultiplier = 1.8f) }
-                        val itemHeights = remember(lines) { mutableStateMapOf<Int, Int>() }
-                        var isInitialLayout by remember(lines) { mutableStateOf(true) }
+                        var userScrolled by remember { mutableStateOf(false) }
                         val density = LocalDensity.current
-                        val scope = rememberCoroutineScope()
 
-                        LaunchedEffect(isAutoScrollLocked, lines) {
-                            if (isAutoScrollLocked) {
-                                val start = userManualOffset
-                                if (kotlin.math.abs(start) < 1f) {
-                                    userManualOffset = 0f
-                                    return@LaunchedEffect
-                                }
-                                val anim = Animatable(start)
-                                var lastValue = start
-                                anim.animateTo(0f, tween((kotlin.math.abs(start) / 4f).toInt().coerceIn(200, 600), easing = FastOutSlowInEasing)) {
-                                    userManualOffset += (value - lastValue)
-                                    lastValue = value
-                                }
-                                userManualOffset = 0f
+                        LaunchedEffect(listState.isScrollInProgress) {
+                            if (listState.isScrollInProgress) {
+                                userScrolled = true
+                                isAutoScrollLocked = false
+                            } else if (userScrolled) {
+                                delay(3500)
+                                userScrolled = false
+                                isAutoScrollLocked = true
                             }
                         }
 
-                        BoxWithConstraints(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .nestedScroll(remember {
-                                    object : NestedScrollConnection {
-                                        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                                            if (source == NestedScrollSource.UserInput) isAutoScrollLocked = false
-                                            return super.onPostScroll(consumed, available, source)
-                                        }
-                                        override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                                            isAutoScrollLocked = false
-                                            return super.onPostFling(consumed, available)
-                                        }
+                        LaunchedEffect(activeIndexClean, isAutoScrollLocked, lyricsActivePosition) {
+                            if (isAutoScrollLocked && activeIndexClean in lines.indices) {
+                                val viewportHeight = listState.layoutInfo.viewportSize.height
+                                val targetOffset = if (viewportHeight > 0) {
+                                    when (lyricsActivePosition) {
+                                        "TOP" -> -with(density) { 36.dp.roundToPx() }
+                                        "BOTTOM" -> -(viewportHeight - with(density) { 140.dp.roundToPx() })
+                                        else -> -(viewportHeight / 2 - with(density) { 36.dp.roundToPx() })
                                     }
-                                })
-                                .pointerInput(Unit) {
-                                    awaitPointerEventScope {
-                                        while (true) {
-                                            val down = awaitFirstDown(requireUnconsumed = false)
-                                            if (isInitialLayout) continue
-                                            flingJob?.cancel()
-                                            velocityTracker.resetTracking()
-                                            isAutoScrollLocked = false
-                                            velocityTracker.addPosition(down.uptimeMillis, down.position)
-                                            verticalDrag(down.id) { change ->
-                                                userManualOffset = (userManualOffset + change.positionChange().y)
-                                                velocityTracker.addPosition(change.uptimeMillis, change.position)
-                                                change.consume()
-                                            }
-                                            val velocity = velocityTracker.calculateVelocity().y
-                                            flingJob = scope.launch {
-                                                AnimationState(initialValue = userManualOffset, initialVelocity = velocity).animateDecay(decayAnimSpec) {
-                                                    userManualOffset = value
-                                                }
-                                            }
-                                        }
+                                } else 0
+                                listState.animateScrollToItem(activeIndexClean, targetOffset)
+                            }
+                        }
+
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            val baseFontSize = if (lyricsSameFontSize) (lyricsActiveFontSize * 1.05f) else lyricsActiveFontSize.toFloat()
+
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(
+                                    top = with(density) { (listState.layoutInfo.viewportSize.height * 0.35f).coerceAtLeast(100f).toDp() },
+                                    bottom = with(density) { (listState.layoutInfo.viewportSize.height * 0.45f).coerceAtLeast(150f).toDp() },
+                                    start = lyricsMargin.dp,
+                                    end = lyricsMargin.dp
+                                ),
+                                verticalArrangement = Arrangement.spacedBy(lyricsItemSpacing.dp),
+                                horizontalAlignment = colAlign
+                            ) {
+                                itemsIndexed(
+                                    items = lines,
+                                    key = { idx, item -> "$idx-${item.timestampMs}" }
+                                ) { listIndex, line ->
+                                    val isAudioActive = activeLineIndices.contains(listIndex)
+                                    val colorTarget = if (isAudioActive) activeColor else otherColor
+                                    val colorState by animateColorAsState(
+                                        targetValue = colorTarget,
+                                        animationSpec = tween(300, easing = LinearOutSlowInEasing),
+                                        label = "LyrColor_$listIndex"
+                                    )
+
+                                    val displayText = if (line.isBackground) {
+                                        line.text.replace(Regex("^\\s*\\(|\\)\\s*$"), "").trim()
+                                    } else {
+                                        line.text.trim()
                                     }
-                                }
-                        ) {
-                            val maxHeightPx = constraints.maxHeight.toFloat()
-                            val anchorY = when (lyricsActivePosition) {
-                                "TOP" -> with(density) { 32.dp.toPx() }
-                                "BOTTOM" -> maxHeightPx - with(density) { 100.dp.toPx() }
-                                else -> maxHeightPx / 2f - with(density) { 30.dp.toPx() }
-                            }
-                            val fallbackLineHeight = with(density) { 68.dp.toPx() }
 
-                            val positions = remember(itemHeights.toMap(), activeIndexClean, lines) {
-                                val map = mutableMapOf<Int, Float>()
-                                if (lines.isEmpty()) return@remember map
-
-                                map[activeIndexClean] = 0f
-                                var currentY = 0f
-                                for (i in activeIndexClean - 1 downTo 0) {
-                                    val height = itemHeights[i]?.toFloat() ?: fallbackLineHeight
-                                    val lineBelow = lines.getOrNull(i + 1)
-                                    val noGap = lineBelow?.isBackground == true
-                                    currentY -= (height + if (noGap) 0f else with(density) { lyricsItemSpacing.dp.toPx() })
-                                    map[i] = currentY
-                                }
-                                currentY = 0f
-                                for (i in activeIndexClean until lines.size - 1) {
-                                    val height = itemHeights[i]?.toFloat() ?: fallbackLineHeight
-                                    val nextLine = lines.getOrNull(i + 1)
-                                    val nextNoGap = nextLine?.isBackground == true
-                                    currentY += (height + if (nextNoGap) 0f else with(density) { lyricsItemSpacing.dp.toPx() })
-                                    map[i + 1] = currentY
-                                }
-                                map
-                            }
-
-                            LaunchedEffect(lines.size) {
-                                if (lines.isNotEmpty()) {
-                                    isInitialLayout = true
-                                    kotlinx.coroutines.withTimeoutOrNull(600) {
-                                        snapshotFlow { 
-                                            val h = itemHeights.toMap()
-                                            val windowStart = (activeIndexClean - 4).coerceAtLeast(0)
-                                            val windowEnd = (activeIndexClean + 6).coerceAtMost(lines.size - 1)
-                                            (windowStart..windowEnd).all { h.containsKey(it) } 
-                                        }.first { it }
-                                    }
-                                    isInitialLayout = false
-                                }
-                            }
-
-                            lines.forEachIndexed { listIndex, line ->
-                                key(listIndex) {
-                                    val distance = kotlin.math.abs(listIndex - activeIndexClean)
-                                    val targetOffset = anchorY + (positions[listIndex] ?: ((listIndex - activeIndexClean).toFloat() * fallbackLineHeight))
-                                    
-                                    // CULL OUT-OF-BOUNDS ITEMS to prevent massive frame drops
-                                    val currentEstimatedY = targetOffset + userManualOffset
-                                    val isVisible = currentEstimatedY > -1000f && currentEstimatedY < maxHeightPx + 1000f
-                                    
-                                    if (isVisible) {
-                                        val frozenOffset = remember { mutableFloatStateOf(targetOffset) }
-                                        LaunchedEffect(isAutoScrollLocked, targetOffset, isInitialLayout) {
-                                            if (isAutoScrollLocked || isInitialLayout) frozenOffset.floatValue = targetOffset
-                                        }
-                                        val animatedOffset by animateFloatAsState(
-                                            targetValue = if (isAutoScrollLocked) targetOffset else frozenOffset.floatValue,
-                                            animationSpec = if (isInitialLayout || !isAutoScrollLocked) snap<Float>() 
-                                                            else {
-                                                                tween<Float>(750, (distance * 20).coerceAtMost(200), FastOutSlowInEasing)
-                                                            },
-                                            label = "lyricStaggeredOffset_$listIndex"
-                                        )
-
-                                        val isAudioActive = activeLineIndices.contains(listIndex)
-
-                                        val baseFontSize = if (lyricsSameFontSize) (lyricsActiveFontSize * 1.05f) else lyricsActiveFontSize.toFloat()
-                                        val colorTarget = if (isAudioActive) activeColor else otherColor
-                                        val colorState by animateColorAsState(
-                                            targetValue = colorTarget,
-                                            animationSpec = tween(400, easing = LinearOutSlowInEasing),
-                                            label = "LyrColor_$listIndex"
-                                        )
-
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .layout { m, c -> 
-                                                    val p = m.measure(c.copy(maxHeight = Constraints.Infinity))
-                                                    if (p.height > 0) {
-                                                        itemHeights[listIndex] = p.height
-                                                    }
-                                                    layout(p.width, 0) { p.place(0, 0) }
-                                                }
-                                                .offset { IntOffset(0, (animatedOffset + userManualOffset).roundToInt()) }
-                                                .padding(horizontal = lyricsMargin.dp)
-                                        ) {
-                                            
-                                            Box(modifier = Modifier.fillMaxWidth().clickable {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable {
                                                 isAutoScrollLocked = true
+                                                userScrolled = false
                                                 onSeekTo(line.timestampMs)
-                                            }) {
-                                                val displayText = if (line.isBackground) line.text.replace(Regex("^\\s*\\(|\\)\\s*$"), "").trim() else line.text.trim()
-                                                if (line.words.isNotEmpty()) {
-                                                    FloraWordLevelLyrics(
-                                                        mainText = displayText,
-                                                        words = line.words,
-                                                        isActiveLine = isAudioActive,
-                                                        playbackPosition = playbackPosition,
-                                                        isPlaying = isPlaying,
-                                                        lyricStyle = TextStyle(
-                                                            fontFamily = customFontFamily,
-                                                            fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            textAlign = align,
-                                                            lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp
-                                                        ),
-                                                        lineColor = otherColor,
-                                                        expressiveAccent = activeColor,
-                                                        isBackground = line.isBackground,
-                                                        focusedAlpha = 0.5f,
-                                                        alignment = align
-                                                    )
-                                                } else {
-                                                    Text(
-                                                        text = displayText,
-                                                        fontFamily = customFontFamily,
-                                                        fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = colorState,
-                                                        textAlign = align,
-                                                        lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp,
-                                                        modifier = Modifier.fillMaxWidth()
-                                                    )
-                                                }
                                             }
+                                            .padding(vertical = 4.dp),
+                                        contentAlignment = when (lyricsAlignment) {
+                                            "LEFT" -> Alignment.CenterStart
+                                            "RIGHT" -> Alignment.CenterEnd
+                                            else -> Alignment.Center
                                         }
-                                    } // end isVisible
-                                } // end key
+                                    ) {
+                                        if (line.words.isNotEmpty()) {
+                                            FloraWordLevelLyrics(
+                                                mainText = displayText,
+                                                words = line.words,
+                                                isActiveLine = isAudioActive,
+                                                playbackPosition = playbackPosition,
+                                                isPlaying = isPlaying,
+                                                lyricStyle = TextStyle(
+                                                    fontFamily = customFontFamily,
+                                                    fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    textAlign = align,
+                                                    lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp
+                                                ),
+                                                lineColor = otherColor,
+                                                expressiveAccent = activeColor,
+                                                isBackground = line.isBackground,
+                                                focusedAlpha = 0.5f,
+                                                alignment = align
+                                            )
+                                        } else {
+                                            Text(
+                                                text = displayText,
+                                                fontFamily = customFontFamily,
+                                                fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = colorState,
+                                                textAlign = align,
+                                                lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp,
+                                                modifier = Modifier.fillMaxWidth()
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = !isAutoScrollLocked && userScrolled,
+                                enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.scaleIn(),
+                                exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.scaleOut(),
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(bottom = 24.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        isAutoScrollLocked = true
+                                        userScrolled = false
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = androidx.compose.ui.graphics.Color(0xFF1E293B).copy(alpha = 0.92f),
+                                        contentColor = EmeraldLight
+                                    ),
+                                    shape = RoundedCornerShape(20.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldGreen.copy(alpha = 0.5f)),
+                                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp),
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Sync,
+                                        contentDescription = null,
+                                        tint = EmeraldGreen,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Lompat ke lirik aktif",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White
+                                    )
+                                }
                             }
                         }
                     }
-
                 }
             }
         }
@@ -1744,194 +1722,118 @@ fun SynchronizedLyricsLayout(
                 set
             }
 
+            val listState = rememberLazyListState()
             var isAutoScrollLocked by remember { mutableStateOf(true) }
-            var userManualOffset by remember { mutableFloatStateOf(0f) }
-            var flingJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
-            val velocityTracker = remember { VelocityTracker() }
-            val decayAnimSpec = remember { exponentialDecay<Float>(frictionMultiplier = 1.8f) }
-            val itemHeights = remember(lines) { mutableStateMapOf<Int, Int>() }
-            var isInitialLayout by remember(lines) { mutableStateOf(true) }
+            var userScrolled by remember { mutableStateOf(false) }
             val density = LocalDensity.current
-            val scope = rememberCoroutineScope()
 
-            LaunchedEffect(isAutoScrollLocked, lines) {
-                if (isAutoScrollLocked) {
-                    val start = userManualOffset
-                    if (kotlin.math.abs(start) < 1f) {
-                        userManualOffset = 0f
-                        return@LaunchedEffect
-                    }
-                    val anim = Animatable(start)
-                    var lastValue = start
-                    anim.animateTo(0f, tween((kotlin.math.abs(start) / 4f).toInt().coerceIn(200, 600), easing = FastOutSlowInEasing)) {
-                        userManualOffset += (value - lastValue)
-                        lastValue = value
-                    }
-                    userManualOffset = 0f
+            LaunchedEffect(listState.isScrollInProgress) {
+                if (listState.isScrollInProgress) {
+                    userScrolled = true
+                    isAutoScrollLocked = false
+                } else if (userScrolled) {
+                    delay(3500)
+                    userScrolled = false
+                    isAutoScrollLocked = true
                 }
             }
 
-            BoxWithConstraints(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(remember {
-                        object : NestedScrollConnection {
-                            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                                if (source == NestedScrollSource.UserInput) isAutoScrollLocked = false
-                                return super.onPostScroll(consumed, available, source)
+            LaunchedEffect(activeIndexClean, isAutoScrollLocked, lyricsActivePosition) {
+                if (isAutoScrollLocked && activeIndexClean in lines.indices) {
+                    val viewportHeight = listState.layoutInfo.viewportSize.height
+                    val targetOffset = if (viewportHeight > 0) {
+                        when (lyricsActivePosition) {
+                            "TOP" -> -with(density) { 36.dp.roundToPx() }
+                            "BOTTOM" -> -(viewportHeight - with(density) { 140.dp.roundToPx() })
+                            else -> -(viewportHeight / 2 - with(density) { 36.dp.roundToPx() })
+                        }
+                    } else 0
+                    listState.animateScrollToItem(activeIndexClean, targetOffset)
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                val baseFontSize = if (lyricsSameFontSize) (lyricsActiveFontSize * 1.05f) else lyricsActiveFontSize.toFloat()
+
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        top = with(density) { (listState.layoutInfo.viewportSize.height * 0.35f).coerceAtLeast(100f).toDp() },
+                        bottom = with(density) { (listState.layoutInfo.viewportSize.height * 0.45f).coerceAtLeast(150f).toDp() },
+                        start = lyricsMargin.dp,
+                        end = lyricsMargin.dp
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(lyricsItemSpacing.dp),
+                    horizontalAlignment = colAlign
+                ) {
+                    itemsIndexed(
+                        items = lines,
+                        key = { idx, item -> "$idx-${item.timestampMs}" }
+                    ) { listIndex, line ->
+                        val isAudioActive = activeLineIndices.contains(listIndex)
+                        val colorTarget = if (isAudioActive) activeColor else otherColor
+                        val colorState by animateColorAsState(
+                            targetValue = colorTarget,
+                            animationSpec = tween(300, easing = LinearOutSlowInEasing),
+                            label = "LyrColorSync_$listIndex"
+                        )
+
+                        val displayText = if (line.isBackground) {
+                            line.text.replace(Regex("^\\s*\\(|\\)\\s*$"), "").trim()
+                        } else {
+                            line.text.trim()
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    isAutoScrollLocked = true
+                                    userScrolled = false
+                                    onSeekTo(line.timestampMs)
+                                }
+                                .padding(vertical = 4.dp),
+                            contentAlignment = when (lyricsAlignment) {
+                                "LEFT" -> Alignment.CenterStart
+                                "RIGHT" -> Alignment.CenterEnd
+                                else -> Alignment.Center
                             }
-                            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                                isAutoScrollLocked = false
-                                return super.onPostFling(consumed, available)
+                        ) {
+                            if (line.words.isNotEmpty()) {
+                                FloraWordLevelLyrics(
+                                    mainText = displayText,
+                                    words = line.words,
+                                    isActiveLine = isAudioActive,
+                                    playbackPosition = currentPositionMs,
+                                    isPlaying = isPlaying,
+                                    lyricStyle = TextStyle(
+                                        fontFamily = customFontFamily,
+                                        fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = align,
+                                        lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp
+                                    ),
+                                    lineColor = otherColor,
+                                    expressiveAccent = activeColor,
+                                    isBackground = line.isBackground,
+                                    focusedAlpha = 0.5f,
+                                    alignment = align
+                                )
+                            } else {
+                                Text(
+                                    text = displayText,
+                                    fontFamily = customFontFamily,
+                                    fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colorState,
+                                    textAlign = align,
+                                    lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                             }
                         }
-                    })
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                val down = awaitFirstDown(requireUnconsumed = false)
-                                if (isInitialLayout) continue
-                                flingJob?.cancel()
-                                velocityTracker.resetTracking()
-                                isAutoScrollLocked = false
-                                velocityTracker.addPosition(down.uptimeMillis, down.position)
-                                verticalDrag(down.id) { change ->
-                                    userManualOffset = (userManualOffset + change.positionChange().y)
-                                    velocityTracker.addPosition(change.uptimeMillis, change.position)
-                                    change.consume()
-                                }
-                                val velocity = velocityTracker.calculateVelocity().y
-                                flingJob = scope.launch {
-                                    AnimationState(initialValue = userManualOffset, initialVelocity = velocity).animateDecay(decayAnimSpec) {
-                                        userManualOffset = value
-                                    }
-                                }
-                            }
-                        }
-                    }
-            ) {
-                val maxHeightPx = constraints.maxHeight.toFloat()
-                val anchorY = when (lyricsActivePosition) {
-                    "TOP" -> with(density) { 32.dp.toPx() }
-                    "BOTTOM" -> maxHeightPx - with(density) { 100.dp.toPx() }
-                    else -> maxHeightPx / 2f - with(density) { 30.dp.toPx() }
-                }
-                val fallbackLineHeight = with(density) { 68.dp.toPx() }
-
-                val positions = remember(itemHeights.toMap(), activeIndexClean, lines) {
-                    val map = mutableMapOf<Int, Float>()
-                    if (lines.isEmpty()) return@remember map
-
-                    map[activeIndexClean] = 0f
-                    var currentY = 0f
-                    for (i in activeIndexClean - 1 downTo 0) {
-                        val height = itemHeights[i]?.toFloat() ?: fallbackLineHeight
-                        val lineBelow = lines.getOrNull(i + 1)
-                        val noGap = lineBelow?.isBackground == true
-                        currentY -= (height + if (noGap) 0f else with(density) { lyricsItemSpacing.dp.toPx() })
-                        map[i] = currentY
-                    }
-                    currentY = 0f
-                    for (i in activeIndexClean until lines.size - 1) {
-                        val height = itemHeights[i]?.toFloat() ?: fallbackLineHeight
-                        val nextLine = lines.getOrNull(i + 1)
-                        val nextNoGap = nextLine?.isBackground == true
-                        currentY += (height + if (nextNoGap) 0f else with(density) { lyricsItemSpacing.dp.toPx() })
-                        map[i + 1] = currentY
-                    }
-                    map
-                }
-
-                LaunchedEffect(lines.size) {
-                    if (lines.isNotEmpty()) {
-                        isInitialLayout = true
-                        snapshotFlow { 
-                            val h = itemHeights.toMap()
-                            val windowStart = (activeIndexClean - 8).coerceAtLeast(0)
-                            val windowEnd = (activeIndexClean + 12).coerceAtMost(lines.size - 1)
-                            (windowStart..windowEnd).all { h.containsKey(it) } 
-                        }.first { it }
-                        isInitialLayout = false
-                    }
-                }
-
-                lines.forEachIndexed { listIndex, line ->
-                    val distance = kotlin.math.abs(listIndex - activeIndexClean)
-                    val targetOffset = anchorY + positions.getOrDefault(listIndex, (listIndex - activeIndexClean) * fallbackLineHeight)
-                    val frozenOffset = remember { mutableFloatStateOf(targetOffset) }
-                    LaunchedEffect(isAutoScrollLocked, targetOffset, isInitialLayout) {
-                        if (isAutoScrollLocked || isInitialLayout) frozenOffset.floatValue = targetOffset
-                    }
-                    val animatedOffset by animateFloatAsState(
-                        targetValue = if (isAutoScrollLocked) targetOffset else frozenOffset.floatValue,
-                        animationSpec = if (isInitialLayout || !isAutoScrollLocked) snap<Float>() 
-                                        else {
-                                            tween<Float>(750, (distance * 20).coerceAtMost(200), FastOutSlowInEasing)
-                                        },
-                        label = "lyricStaggeredOffset_$listIndex"
-                    )
-
-                    val isAudioActive = activeLineIndices.contains(listIndex)
-
-                    val baseFontSize = if (lyricsSameFontSize) (lyricsActiveFontSize * 1.05f) else lyricsActiveFontSize.toFloat()
-                    val minScale = if (lyricsSameFontSize) (lyricsActiveFontSize / baseFontSize) else (lyricsOtherFontSize / baseFontSize)
-                    val colorTarget = if (isAudioActive) activeColor else otherColor
-                    val colorState by animateColorAsState(
-                        targetValue = colorTarget,
-                        animationSpec = tween(400, easing = LinearOutSlowInEasing),
-                        label = "LyrColor_$listIndex"
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .layout { m, c -> 
-                                val p = m.measure(c.copy(maxHeight = Constraints.Infinity))
-                                layout(p.width, 0) { p.place(0, 0) }
-                            }
-                            .offset { IntOffset(0, (animatedOffset + userManualOffset).roundToInt()) }
-                            .padding(horizontal = lyricsMargin.dp)
-                            .onSizeChanged { itemHeights[listIndex] = it.height }
-                    ) {
-                        
-                                    Box(modifier = Modifier.fillMaxWidth().clickable {
-                                        isAutoScrollLocked = true
-                                        onSeekTo(line.timestampMs)
-                                    }) {
-                                        val displayText = if (line.isBackground) line.text.replace(Regex("^\\s*\\(|\\)\\s*$"), "").trim() else line.text.trim()
-                                        if (line.words.isNotEmpty()) {
-                                            FloraWordLevelLyrics(
-                                                mainText = displayText,
-                                                words = line.words,
-                                                isActiveLine = isAudioActive,
-                                                playbackPosition = currentPositionMs,
-                                                isPlaying = isPlaying,
-                                                lyricStyle = TextStyle(
-                                                    fontFamily = customFontFamily,
-                                                    fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    textAlign = align,
-                                                    lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp
-                                                ),
-                                                lineColor = otherColor,
-                                                expressiveAccent = activeColor,
-                                                isBackground = line.isBackground,
-                                                focusedAlpha = 0.5f,
-                                                alignment = align
-                                            )
-                                        } else {
-                                            Text(
-                                                text = displayText,
-                                                fontFamily = customFontFamily,
-                                                fontSize = if (line.isBackground) (baseFontSize * 0.75f).sp else baseFontSize.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = colorState,
-                                                textAlign = align,
-                                                lineHeight = if (line.isBackground) (baseFontSize * 0.75f * lyricsLineHeightMultiplier).sp else (baseFontSize * lyricsLineHeightMultiplier).sp,
-                                                modifier = Modifier.fillMaxWidth()
-                                            )
-                                        }
-
                     }
                 }
             }
@@ -1939,7 +1841,6 @@ fun SynchronizedLyricsLayout(
     }
 }
 
-}
 // Dialog definitions
 @Composable
 fun PlaybackSpeedPresetsDialog(
@@ -2677,9 +2578,17 @@ fun FloraWordLevelLyrics(
 ) {
     val density = LocalDensity.current
     val textMeasurer = rememberTextMeasurer()
-    val glowPaint = remember {
+    val boldTypeface = remember {
+        try {
+            android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+        } catch (e: Throwable) {
+            android.graphics.Typeface.DEFAULT_BOLD
+        }
+    }
+    val glowPaint = remember(boldTypeface) {
         android.graphics.Paint().apply {
             isAntiAlias = true
+            typeface = boldTypeface
         }
     }
     
@@ -3008,6 +2917,8 @@ fun FloraWordLevelLyrics(
                     lineTotalPushes[lineIdx] += charBounds.width * (charScaleX - 1f)
                 }
 
+                glowPaint.textSize = with(density) { lyricStyle.fontSize.toPx() }
+
                 // Main drawing loop: iterate over cluster indices so each visual
                 // glyph (including multi-codepoint Devanagari clusters) is one unit.
                 for (i in 0 until clusterCount) {
@@ -3120,8 +3031,6 @@ fun FloraWordLevelLyrics(
                                         drawIntoCanvas { canvas ->
                                             glowPaint.maskFilter = BlurMaskFilter(baseGlowRadius.coerceAtLeast(0.1f), BlurMaskFilter.Blur.NORMAL)
                                             glowPaint.color = expressiveAccent.copy(alpha = glowAlpha).toArgb()
-                                            glowPaint.textSize = with(density) { lyricStyle.fontSize.toPx() }
-                                            glowPaint.typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
                                             val textToDraw = letterLayouts[i].layoutInput.text.text
                                             val yPos = letterLayouts[i].firstBaseline
                                             canvas.nativeCanvas.drawText(textToDraw, 0f, yPos, glowPaint)
