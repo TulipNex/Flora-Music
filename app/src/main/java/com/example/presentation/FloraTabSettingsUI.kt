@@ -510,6 +510,15 @@ list.add(TabEditItem("HEADER_HIDDEN", "Tab Tersembunyi", TabRole.HEADER, false))
                                             }
                                             val idx = allItems.indexOf(item)
                                             if (idx != -1) {
+                                                if (nextRole == TabRole.SUB && idx == 0) {
+                                                    val nextMainIdx = allItems.indexOfFirst { it != item && it.role == TabRole.MAIN }
+                                                    if (nextMainIdx != -1) {
+                                                        val moved = allItems.removeAt(idx)
+                                                        allItems.add(nextMainIdx, moved.copy(role = TabRole.SUB))
+                                                        validateAndSaveFn()
+                                                        return@Button
+                                                    }
+                                                }
                                                 allItems[idx] = item.copy(role = nextRole)
                                                 validateAndSaveFn()
                                             }
@@ -531,6 +540,15 @@ list.add(TabEditItem("HEADER_HIDDEN", "Tab Tersembunyi", TabRole.HEADER, false))
                                             }
                                             val idx = allItems.indexOf(item)
                                             if (idx != -1) {
+                                                if (nextRole == TabRole.SUB && idx == 0) {
+                                                    val nextMainIdx = allItems.indexOfFirst { it != item && it.role == TabRole.MAIN }
+                                                    if (nextMainIdx != -1) {
+                                                        val moved = allItems.removeAt(idx)
+                                                        allItems.add(nextMainIdx, moved.copy(role = TabRole.SUB))
+                                                        validateAndSaveFn()
+                                                        return@Button
+                                                    }
+                                                }
                                                 allItems[idx] = item.copy(role = nextRole)
                                                 validateAndSaveFn()
                                             }
