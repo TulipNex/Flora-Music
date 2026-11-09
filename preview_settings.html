@@ -1,0 +1,2445 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flora Music - Preview Lengkap Semua Pengaturan & Standardisasi UI/UX</title>
+  <style>
+    :root {
+      --bg-dark: #0A0D0B;
+      --card-slate: #161A18;
+      --surface-slate: #1F2421;
+      --surface-hover: #262E2A;
+      --divider-slate: #242B27;
+      --emerald: #10B981;
+      --emerald-dark: #059669;
+      --emerald-light: #34D399;
+      --emerald-glow: rgba(16, 185, 129, 0.25);
+      --text-main: #FFFFFF;
+      --text-sec: #9CA3AF;
+      --text-muted: #6B7280;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    body {
+      background: #0d110f;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px 16px 60px;
+    }
+
+    /* Top Master Control Panel */
+    .top-panel {
+      max-width: 920px;
+      width: 100%;
+      background: #141916;
+      border: 1px solid #232B26;
+      border-radius: 16px;
+      padding: 18px 22px;
+      margin-bottom: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+
+    .top-panel h1 {
+      font-size: 19px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .top-panel h1 span {
+      background: var(--emerald);
+      color: #000;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: 800;
+    }
+
+    .top-panel p {
+      color: var(--text-sec);
+      font-size: 13.5px;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    /* Screen Selector Navigation Bar */
+    .nav-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .nav-tab-btn {
+      background: var(--card-slate);
+      border: 1.5px solid #232B26;
+      border-radius: 10px;
+      padding: 8px 15px;
+      color: var(--text-sec);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+
+    .nav-tab-btn:hover {
+      background: var(--surface-slate);
+      color: #fff;
+    }
+
+    .nav-tab-btn.active {
+      border-color: var(--emerald);
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--emerald);
+      box-shadow: 0 0 16px var(--emerald-glow);
+    }
+
+    /* Phone Mockup Frame */
+    .phone-container {
+      width: 400px;
+      height: 830px;
+      background: var(--bg-dark);
+      border-radius: 46px;
+      border: 8px solid #202622;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.85), 0 0 0 1px #313B35;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      height: 38px;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      z-index: 30;
+      background: var(--bg-dark);
+      flex-shrink: 0;
+    }
+
+    .camera-punch {
+      width: 12px;
+      height: 12px;
+      background: #000;
+      border-radius: 50%;
+      border: 1px solid #1a1a1a;
+    }
+
+    .status-icons {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    /* Multi-screen Slider */
+    .screen-slider {
+      flex: 1;
+      display: flex;
+      width: 400%;
+      height: calc(100% - 38px);
+      transition: transform 0.32s cubic-bezier(0.2, 0.9, 0.3, 1);
+    }
+
+    .screen-view {
+      width: 25%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      background: var(--bg-dark);
+      position: relative;
+    }
+
+    /* Custom Scrollbar */
+    .screen-view::-webkit-scrollbar {
+      width: 4px;
+    }
+    .screen-view::-webkit-scrollbar-thumb {
+      background: #252D28;
+      border-radius: 4px;
+    }
+
+    /* Header Bar */
+    .app-header {
+      padding: 10px 16px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-dark);
+      position: sticky;
+      top: 0;
+      z-index: 15;
+      border-bottom: 1px solid #141916;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .back-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .back-btn:hover {
+      background: var(--surface-slate);
+    }
+
+    .header-title {
+      font-size: 18.5px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .header-action-btn {
+      padding: 6px 12px;
+      border-radius: 8px;
+      background: var(--surface-slate);
+      border: 1px solid #28332D;
+      color: var(--text-sec);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.15s;
+    }
+
+    .header-action-btn:hover {
+      background: #2D3933;
+      color: #fff;
+    }
+
+    .header-action-btn.primary {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: var(--emerald);
+    }
+
+    /* Settings Content Container */
+    .settings-body {
+      flex: 1;
+      padding: 8px 16px 50px;
+    }
+
+    .section-title {
+      font-size: 11.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--emerald);
+      margin: 18px 8px 8px;
+    }
+
+    .settings-group {
+      background: var(--card-slate);
+      border-radius: 16px;
+      border: 1px solid #212924;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    /* Setting Row Standard */
+    .setting-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      position: relative;
+    }
+
+    .setting-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 16px;
+      right: 16px;
+      height: 1px;
+      background: var(--divider-slate);
+    }
+
+    .setting-item:hover {
+      background: var(--surface-hover);
+    }
+
+    .setting-item:active {
+      background: #2b332f;
+    }
+
+    .setting-item.no-click {
+      cursor: default;
+    }
+    .setting-item.no-click:hover {
+      background: transparent;
+    }
+
+    .setting-info {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+      padding-right: 12px;
+    }
+
+    .setting-label {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .setting-sublabel {
+      font-size: 11.5px;
+      color: var(--text-sec);
+      line-height: 1.35;
+    }
+
+    .setting-trailing {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .trailing-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--emerald);
+    }
+
+    .chevron-icon {
+      width: 18px;
+      height: 18px;
+      color: var(--text-muted);
+      stroke-width: 2.5;
+    }
+
+    /* Switch Component */
+    .toggle-switch {
+      width: 42px;
+      height: 24px;
+      background: #2f3733;
+      border-radius: 20px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.25s;
+    }
+
+    .toggle-switch.active {
+      background: var(--emerald-dark);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      background: #fff;
+      border-radius: 50%;
+      transition: transform 0.25s;
+    }
+
+    .toggle-switch.active::after {
+      transform: translateX(18px);
+      background: #fff;
+    }
+
+    /* Unified Segmented Control (Pill Selector) */
+    .segmented-control {
+      display: flex;
+      background: var(--surface-slate);
+      border: 1px solid #2a332e;
+      border-radius: 10px;
+      padding: 3px;
+      gap: 3px;
+      width: 100%;
+    }
+
+    .segmented-pill {
+      flex: 1;
+      text-align: center;
+      padding: 7px 4px;
+      font-size: 11.5px;
+      font-weight: 600;
+      border-radius: 7px;
+      color: var(--text-sec);
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .segmented-pill:hover {
+      color: #fff;
+    }
+
+    .segmented-pill.active {
+      background: var(--emerald);
+      color: #000;
+      font-weight: 800;
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+    }
+
+    /* Sliders */
+    .slider-row {
+      padding: 12px 16px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .slider-val-badge {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--emerald);
+      background: rgba(16, 185, 129, 0.12);
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .custom-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #29332D;
+      outline: none;
+      -webkit-appearance: none;
+      accent-color: var(--emerald);
+      cursor: pointer;
+    }
+
+    /* Stepper (+ / -) */
+    .stepper {
+      display: flex;
+      align-items: center;
+      background: var(--surface-slate);
+      border-radius: 10px;
+      border: 1px solid #2a332e;
+      overflow: hidden;
+    }
+
+    .stepper-btn {
+      width: 34px;
+      height: 34px;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .stepper-btn:hover {
+      background: #2f3a34;
+      color: var(--emerald);
+    }
+
+    .stepper-input {
+      width: 44px;
+      text-align: center;
+      background: transparent;
+      border: none;
+      color: #fff;
+      font-weight: 700;
+      font-size: 13.5px;
+      outline: none;
+    }
+
+    /* Tab Settings: Draggable Cards */
+    .tab-card-row {
+      display: flex;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--card-slate);
+      border-radius: 12px;
+      border: 1px solid #232B26;
+      margin-bottom: 6px;
+      transition: all 0.15s;
+      cursor: grab;
+    }
+
+    .tab-card-row.subtab {
+      margin-left: 24px;
+      background: #141816;
+      border-color: #1e2521;
+    }
+
+    .tab-card-row.hidden-tab {
+      opacity: 0.65;
+    }
+
+    .tab-icon-box {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--surface-slate);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      margin-right: 10px;
+      flex-shrink: 0;
+      cursor: default;
+      font-size: 14px;
+      border: 1px solid #232B26;
+    }
+
+    .tab-role-chip {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid #2b3630;
+      background: var(--surface-slate);
+      color: var(--emerald);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-role-chip:hover {
+      background: #2b3630;
+    }
+
+    .tab-role-chip.fixed {
+      color: var(--text-muted);
+      border-color: transparent;
+      cursor: default;
+    }
+
+    .tab-edit-btn {
+      color: var(--text-sec);
+      background: transparent;
+      border: none;
+      padding: 6px;
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 4px;
+      transition: all 0.15s ease;
+    }
+
+    .tab-edit-btn:hover {
+      color: #fff;
+      background: var(--surface-hover);
+    }
+
+    /* Live Lyrics Preview Container */
+    .lyrics-live-box {
+      height: 145px;
+      background: #131715;
+      border-radius: 16px;
+      border: 1px solid #222B26;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      margin-bottom: 14px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .lyrics-live-tag {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: var(--emerald);
+      background: rgba(16, 185, 129, 0.12);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .lyric-line {
+      font-size: 12px;
+      color: var(--text-sec);
+      transition: all 0.25s;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin: 3px 0;
+    }
+
+    .lyric-line.active {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--emerald);
+      margin: 4px 0;
+    }
+
+    /* Color Swatch Circle */
+    .color-swatch-circle {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      cursor: pointer;
+    }
+
+    /* Modal / Dialog Backdrops */
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(4px);
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+      opacity: 1;
+    }
+
+    .dialog-card {
+      background: var(--card-slate);
+      border: 1px solid #2d3832;
+      border-radius: 20px;
+      width: 100%;
+      max-width: 320px;
+      padding: 20px;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.85);
+      transform: scale(0.95);
+      transition: transform 0.2s ease;
+    }
+
+    .modal-backdrop.show .dialog-card {
+      transform: scale(1);
+    }
+
+    .dialog-title {
+      font-size: 16.5px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .dialog-desc {
+      font-size: 12px;
+      color: var(--text-sec);
+      line-height: 1.4;
+      margin-bottom: 16px;
+    }
+
+    .dialog-textfield {
+      width: 100%;
+      background: var(--surface-slate);
+      border: 1.5px solid #2e3732;
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      outline: none;
+    }
+
+    .dialog-textfield:focus {
+      border-color: var(--emerald);
+    }
+
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .btn-dialog {
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-dialog.cancel {
+      background: transparent;
+      color: var(--text-sec);
+    }
+
+    .btn-dialog.confirm {
+      background: var(--emerald);
+      color: #000;
+    }
+
+    .badge-chip {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--emerald);
+      font-weight: 600;
+      font-size: 10.5px;
+    }
+
+    /* Icon Grid in Picker Dialog - Purely vertical scrolling, no horizontal scroll */
+    .icon-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-top: 6px;
+      max-height: 150px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 2px;
+    }
+
+    .icon-choice-btn {
+      background: var(--surface-slate);
+      border: 1px solid #29342E;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .icon-choice-btn:hover {
+      background: #2D3933;
+      border-color: var(--emerald);
+    }
+
+    .icon-choice-btn.active {
+      background: rgba(16, 185, 129, 0.22);
+      border-color: var(--emerald);
+      box-shadow: 0 0 10px var(--emerald-glow);
+    }
+
+    /* Blacklist Folder Checkbox List */
+    .folder-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .folder-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      background: var(--surface-slate);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    /* Color Wheel & Preset Dots */
+    .color-preset-dot {
+      width: 25px;
+      height: 25px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid #232B26;
+      transition: transform 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+    .color-preset-dot:hover {
+      transform: scale(1.15);
+      border-color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Controller & Quick Screen Navigator -->
+  <div class="top-panel">
+    <h1>
+      Flora Music - Redesain Lengkap Semua Pengaturan <span>Interactive Prototype</span>
+    </h1>
+    <p>
+      Seluruh elemen dari <strong>semua halaman pengaturan</strong> telah dimasukkan secara lengkap. Klik tab di bawah untuk langsung menuju layar yang diinginkan, atau navigasikan langsung di dalam layar HP:
+    </p>
+
+    <div class="nav-tabs">
+      <button class="nav-tab-btn active" id="tabNav_0" onclick="switchScreen(0)">
+        <span>1. Pengaturan Utama</span>
+      </button>
+
+      <button class="nav-tab-btn" id="tabNav_1" onclick="switchScreen(1)">
+        <span>2. Batas Lagu (Baru)</span>
+      </button>
+
+      <button class="nav-tab-btn" id="tabNav_2" onclick="switchScreen(2)">
+        <span>3. Tab Beranda (Lengkap)</span>
+      </button>
+
+      <button class="nav-tab-btn" id="tabNav_3" onclick="switchScreen(3)">
+        <span>4. Tampilan Lirik (Lengkap)</span>
+      </button>
+
+      <button class="nav-tab-btn" onclick="switchScreen(2); setTimeout(openAddTabDialog, 150);" style="border-color:#38BDF8; color:#38BDF8;">
+        <span>➕ Uji Tambah Subtab & Ikon</span>
+      </button>
+
+      <button class="nav-tab-btn" id="tabNav_ColorTest" onclick="testRoundColorPicker()" style="border-color:#10B981; color:#34D399;">
+        <span>🎨 Uji Color Picker Bulat</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Interactive Phone Mockup Frame -->
+  <div class="phone-container">
+    
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <span>19:48</span>
+      <div class="camera-punch"></div>
+      <div class="status-icons">
+        <span>5G</span>
+        <span>84%</span>
+      </div>
+    </div>
+
+    <!-- Screen Sliding Container (4 Screens) -->
+    <div class="screen-slider" id="screenSlider">
+
+      <!-- ================= SCREEN 0: PENGATURAN UTAMA ================= -->
+      <div class="screen-view" id="screen_main">
+        <div class="app-header">
+          <div class="header-left">
+            <button class="back-btn" onclick="alert('Kembali ke Beranda Musik')">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="header-title">Pengaturan</div>
+          </div>
+        </div>
+
+        <div class="settings-body">
+          
+          <!-- Kategori: TAMPILAN -->
+          <div class="section-title">Tampilan</div>
+          <div class="settings-group">
+            
+            <!-- Item 1: Grid Mode Switch -->
+            <div class="setting-item" onclick="toggleSwitch('gridSwitch')">
+              <div class="setting-info">
+                <div class="setting-label">Tampilan Grid di Home</div>
+                <div class="setting-sublabel">Gunakan grid alih-alih list untuk lagu dan kategori</div>
+              </div>
+              <div class="setting-trailing">
+                <div class="toggle-switch active" id="gridSwitch"></div>
+              </div>
+            </div>
+
+            <!-- Item 2: Tab Beranda (Navigasi Sejajar) -->
+            <div class="setting-item" onclick="switchScreen(2)">
+              <div class="setting-info">
+                <div class="setting-label">Tab Beranda</div>
+                <div class="setting-sublabel">Atur urutan, subtab, dan visibilitas tab di beranda</div>
+              </div>
+              <div class="setting-trailing">
+                <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </div>
+            </div>
+
+            <!-- Item 3: Batas Lagu (Navigasi Sejajar - Baru) -->
+            <div class="setting-item" onclick="switchScreen(1)">
+              <div class="setting-info">
+                <div class="setting-label" style="display:flex; align-items:center; gap:6px;">
+                  Batas Lagu <span class="badge-chip">Halaman Baru</span>
+                </div>
+                <div class="setting-sublabel">Batas jumlah lagu riwayat, teratas, dan rentang lagu baru</div>
+              </div>
+              <div class="setting-trailing">
+                <svg class="chevron-icon" style="color:var(--emerald);" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Kategori: UI PLAYER -->
+          <div class="section-title">UI Player</div>
+          <div class="settings-group">
+            <!-- Navigasi ke Tampilan Lirik -->
+            <div class="setting-item" onclick="switchScreen(3)">
+              <div class="setting-info">
+                <div class="setting-label">Tampilan Lirik</div>
+                <div class="setting-sublabel">Sesuaikan posisi, perataan, font, ukuran, warna, dan efek fade</div>
+              </div>
+              <div class="setting-trailing">
+                <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kategori: PERPUSTAKAAN -->
+          <div class="section-title">Perpustakaan</div>
+          <div class="settings-group">
+            
+            <div class="setting-item" onclick="alert('Memulai Pindai Ulang Musik...')">
+              <div class="setting-info">
+                <div class="setting-label">Pindai Ulang Musik</div>
+                <div class="setting-sublabel">Perbarui daftar lagu dari penyimpanan internal</div>
+              </div>
+              <div class="setting-trailing">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              </div>
+            </div>
+
+            <!-- Daftar Hitam Folder Dialog Trigger -->
+            <div class="setting-item" onclick="openFolderBlacklistDialog()">
+              <div class="setting-info">
+                <div class="setting-label">Daftar Hitam Folder</div>
+                <div class="setting-sublabel">Sembunyikan lagu dari folder tertentu</div>
+              </div>
+              <div class="setting-trailing">
+                <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Kategori: TENTANG -->
+          <div class="section-title">Tentang</div>
+          <div class="settings-group">
+            <div class="setting-item no-click">
+              <div class="setting-info">
+                <div class="setting-label">Versi Aplikasi</div>
+                <div class="setting-sublabel">v1.0.35 (Build 135)</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+
+      <!-- ================= SCREEN 1: BATAS LAGU ================= -->
+      <div class="screen-view" id="screen_limit">
+        <div class="app-header">
+          <div class="header-left">
+            <button class="back-btn" onclick="switchScreen(0)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="header-title">Batas Lagu</div>
+          </div>
+        </div>
+
+        <div class="settings-body">
+          <div class="section-title">Batas Jumlah Pemutaran</div>
+          <div class="settings-group">
+            
+            <div class="setting-item" onclick="openNumberDialog('Riwayat', 'historyLimit')">
+              <div class="setting-info">
+                <div class="setting-label">Batas Lagu Riwayat</div>
+                <div class="setting-sublabel">Maksimal riwayat lagu tersimpan (0 = tanpa batas)</div>
+              </div>
+              <div class="setting-trailing">
+                <span class="trailing-value" id="val_history">50 Lagu</span>
+                <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </div>
+            </div>
+
+            <div class="setting-item" onclick="openNumberDialog('Teratas', 'mostPlayedLimit')">
+              <div class="setting-info">
+                <div class="setting-label">Batas Lagu Teratas</div>
+                <div class="setting-sublabel">Maksimal lagu terpopuler yang ditampilkan</div>
+              </div>
+              <div class="setting-trailing">
+                <span class="trailing-value" id="val_mostPlayed">50 Lagu</span>
+                <svg class="chevron-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="section-title">Filter Tab Terbaru</div>
+          <div class="settings-group" style="padding: 16px;">
+            <div class="setting-label" style="margin-bottom: 4px;">Rentang Waktu Lagu Baru</div>
+            <div class="setting-sublabel" style="margin-bottom: 14px;">Hanya lagu yang ditambahkan dalam durasi ini:</div>
+
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom: 12px;">
+              <div class="stepper">
+                <button class="stepper-btn" onclick="stepRecent(-1)">−</button>
+                <input type="text" class="stepper-input" id="inp_recentNum" value="1" onchange="changeRecentNum(this.value)">
+                <button class="stepper-btn" onclick="stepRecent(1)">+</button>
+              </div>
+              <span style="font-size:13.5px; font-weight:700; color:var(--emerald);" id="label_recentUnit">1 Minggu terakhir</span>
+            </div>
+
+            <!-- Segmented Pill Selector Satuan Waktu -->
+            <div class="segmented-control">
+              <div class="segmented-pill" id="unit_Hari" onclick="setRecentUnit('Hari')">Hari</div>
+              <div class="segmented-pill active" id="unit_Minggu" onclick="setRecentUnit('Minggu')">Minggu</div>
+              <div class="segmented-pill" id="unit_Bulan" onclick="setRecentUnit('Bulan')">Bulan</div>
+              <div class="segmented-pill" id="unit_Tahun" onclick="setRecentUnit('Tahun')">Tahun</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ================= SCREEN 2: TAB BERANDA (LENGKAP) ================= -->
+      <div class="screen-view" id="screen_tabs">
+        <div class="app-header">
+          <div class="header-left">
+            <button class="back-btn" onclick="switchScreen(0)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="header-title">Tab Beranda</div>
+          </div>
+
+          <!-- Header Actions Lengkap: Tambah Custom Tab & Reset -->
+          <div class="header-actions">
+            <button class="header-action-btn primary" onclick="openAddTabDialog()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              <span>Tambah</span>
+            </button>
+            <button class="header-action-btn" title="Reset Default" onclick="openResetDialog()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-body">
+          <div style="font-size:12px; color:var(--text-sec); margin: 4px 8px 12px; display:flex; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <span>Tahan dan geser kartu untuk mengubah urutan tab.</span>
+          </div>
+
+          <!-- DAFTAR LENGKAP TAB AKTIF (SESUAI DATABASE FLORA) -->
+          <div class="section-title">Tab Utama & Subtab Aktif</div>
+          <div id="activeTabsList">
+
+          <!-- 1. Beranda -->
+          <div class="tab-card-row">
+            <div class="tab-icon-box">🏠</div>
+            <div class="setting-info">
+              <div class="setting-label">Beranda</div>
+              <div class="setting-sublabel">Tab Utama Default</div>
+            </div>
+            <span class="tab-role-chip fixed">Tetap</span>
+          </div>
+
+          <!-- 2. Lagu -->
+          <div class="tab-card-row">
+            <div class="tab-icon-box">🎵</div>
+            <div class="setting-info">
+              <div class="setting-label">Lagu</div>
+              <div class="setting-sublabel">Daftar Semua Lagu</div>
+            </div>
+            <span class="tab-role-chip fixed">Tetap</span>
+          </div>
+
+          <!-- 3. Album -->
+          <div class="tab-card-row">
+            <div class="tab-icon-box">💿</div>
+            <div class="setting-info">
+              <div class="setting-label">Album</div>
+              <div class="setting-sublabel">Koleksi Album Lagu</div>
+            </div>
+            <span class="tab-role-chip fixed">Tetap</span>
+          </div>
+
+          <!-- 4. Artis -->
+          <div class="tab-card-row">
+            <div class="tab-icon-box">👤</div>
+            <div class="setting-info">
+              <div class="setting-label">Artis</div>
+              <div class="setting-sublabel">Daftar Penyanyi & Musisi</div>
+            </div>
+            <span class="tab-role-chip fixed">Tetap</span>
+          </div>
+
+          <!-- 5. Subtab: Favorit -->
+          <div class="tab-card-row subtab" id="tabRow_Favorit">
+            <div class="tab-icon-box" style="width:28px; height:28px; font-size:13px;">❤️</div>
+            <div class="setting-info">
+              <div class="setting-label" style="display:flex; align-items:center; gap:6px;">
+                <span class="subtab-arrow" style="color:var(--emerald);">↳</span>
+                <span class="tab-name-text">Favorit</span>
+              </div>
+              <div class="setting-sublabel">Subtab di dalam Beranda</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span class="tab-role-chip" style="background:rgba(16,185,129,0.12);" onclick="toggleTabRole(this)">Subtab</span>
+              <button class="tab-edit-btn" title="Edit Tab" onclick="openEditTabDialog('Favorit', '❤️', 'SUB', 'Beranda', false)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 6. Subtab: Riwayat -->
+          <div class="tab-card-row subtab" id="tabRow_Riwayat">
+            <div class="tab-icon-box" style="width:28px; height:28px; font-size:13px;">🕒</div>
+            <div class="setting-info">
+              <div class="setting-label" style="display:flex; align-items:center; gap:6px;">
+                <span class="subtab-arrow" style="color:var(--emerald);">↳</span>
+                <span class="tab-name-text">Riwayat</span>
+              </div>
+              <div class="setting-sublabel">Subtab di dalam Beranda</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span class="tab-role-chip" style="background:rgba(16,185,129,0.12);" onclick="toggleTabRole(this)">Subtab</span>
+              <button class="tab-edit-btn" title="Edit Tab" onclick="openEditTabDialog('Riwayat', '🕒', 'SUB', 'Beranda', false)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 7. Subtab: Teratas -->
+          <div class="tab-card-row subtab" id="tabRow_Teratas">
+            <div class="tab-icon-box" style="width:28px; height:28px; font-size:13px;">📈</div>
+            <div class="setting-info">
+              <div class="setting-label" style="display:flex; align-items:center; gap:6px;">
+                <span class="subtab-arrow" style="color:var(--emerald);">↳</span>
+                <span class="tab-name-text">Teratas</span>
+              </div>
+              <div class="setting-sublabel">Subtab di dalam Beranda</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span class="tab-role-chip" style="background:rgba(16,185,129,0.12);" onclick="toggleTabRole(this)">Subtab</span>
+              <button class="tab-edit-btn" title="Edit Tab" onclick="openEditTabDialog('Teratas', '📈', 'SUB', 'Beranda', false)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 8. Subtab: Terbaru -->
+          <div class="tab-card-row subtab" id="tabRow_Terbaru">
+            <div class="tab-icon-box" style="width:28px; height:28px; font-size:13px;">✨</div>
+            <div class="setting-info">
+              <div class="setting-label" style="display:flex; align-items:center; gap:6px;">
+                <span class="subtab-arrow" style="color:var(--emerald);">↳</span>
+                <span class="tab-name-text">Terbaru</span>
+              </div>
+              <div class="setting-sublabel">Subtab di dalam Beranda</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span class="tab-role-chip" style="background:rgba(16,185,129,0.12);" onclick="toggleTabRole(this)">Subtab</span>
+              <button class="tab-edit-btn" title="Edit Tab" onclick="openEditTabDialog('Terbaru', '✨', 'SUB', 'Beranda', false)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 9. Playlist Tab -->
+          <div class="tab-card-row" id="tabRow_Playlist">
+            <div class="tab-icon-box">📋</div>
+            <div class="setting-info">
+              <div class="setting-label">
+                <span class="tab-name-text">Playlist</span>
+              </div>
+              <div class="setting-sublabel">Koleksi Daftar Putar</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span class="tab-role-chip" onclick="toggleTabRole(this)">Utama</span>
+              <button class="tab-edit-btn" title="Edit Tab" onclick="openEditTabDialog('Playlist', '📋', 'MAIN', '', false)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 10. Custom Tab: Santai (dengan Button Edit Pensil) -->
+          <div class="tab-card-row" id="tabRow_Santai">
+            <div class="tab-icon-box">🎧</div>
+            <div class="setting-info">
+              <div class="setting-label" style="display:flex; align-items:center; gap:6px;">
+                <span class="tab-name-text">Santai</span>
+                <span class="badge-chip">Custom</span>
+              </div>
+              <div class="setting-sublabel">Tab Kustom Pengguna</div>
+            </div>
+            <div style="display:flex; align-items:center; gap:4px;">
+              <span class="tab-role-chip" onclick="toggleTabRole(this)">Utama</span>
+              <button class="tab-edit-btn" title="Edit Tab" onclick="openEditTabDialog('Santai', '🎧', 'MAIN', '', true)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+            </div>
+          </div>
+          </div> <!-- activeTabsList -->
+
+          <!-- TAB TERSEMBUNYI -->
+          <div class="section-title" style="margin-top:22px;">Tab Tersembunyi</div>
+          <div class="tab-card-row hidden-tab">
+            <div class="tab-icon-box">🗂️</div>
+            <div class="setting-info">
+              <div class="setting-label">Genre</div>
+              <div class="setting-sublabel">Tidak tampil di beranda utama</div>
+            </div>
+            <span class="tab-role-chip" style="color:var(--text-sec); border-color:#2a332d;" onclick="alert('Geser ke atas untuk mengaktifkan kembali!')">Sembunyi</span>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ================= SCREEN 3: TAMPILAN LIRIK (LENGKAP) ================= -->
+      <div class="screen-view" id="screen_lyrics">
+        <div class="app-header">
+          <div class="header-left">
+            <button class="back-btn" onclick="switchScreen(0)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            </button>
+            <div class="header-title">Tampilan Lirik</div>
+          </div>
+        </div>
+
+        <div class="settings-body">
+
+          <!-- 1. LIVE PREVIEW LIRIK (RESPONSIF REALTIME) -->
+          <div class="lyrics-live-box" id="lyricsPreviewContainer">
+            <span class="lyrics-live-tag">LIVE PREVIEW</span>
+            <div class="lyric-line" id="prev_line1">And I don't want the world to see me</div>
+            <div class="lyric-line active" id="prev_activeLine">'Cause I don't think that they'd understand</div>
+            <div class="lyric-line" id="prev_line2">When everything's made to be broken</div>
+          </div>
+
+          <!-- 2. KATEGORI: TATA LETAK DAN POSISI -->
+          <div class="section-title">Tata Letak & Posisi</div>
+          <div class="settings-group" style="padding: 14px 16px;">
+            
+            <!-- Posisi Baris Aktif (Segmented Control) -->
+            <div style="margin-bottom: 14px;">
+              <div class="setting-label" style="margin-bottom: 6px;">Posisi Baris Aktif</div>
+              <div class="segmented-control">
+                <div class="segmented-pill" id="pos_TOP" onclick="setLyricPos('TOP')">Atas</div>
+                <div class="segmented-pill active" id="pos_CENTER" onclick="setLyricPos('CENTER')">Tengah</div>
+                <div class="segmented-pill" id="pos_BOTTOM" onclick="setLyricPos('BOTTOM')">Bawah</div>
+              </div>
+            </div>
+
+            <!-- Perataan Lirik (Alignment) -->
+            <div style="margin-bottom: 14px;">
+              <div class="setting-label" style="margin-bottom: 6px;">Perataan Teks (Alignment)</div>
+              <div class="segmented-control">
+                <div class="segmented-pill" id="align_LEFT" onclick="setLyricAlign('LEFT')">Kiri</div>
+                <div class="segmented-pill active" id="align_CENTER" onclick="setLyricAlign('CENTER')">Tengah</div>
+                <div class="segmented-pill" id="align_RIGHT" onclick="setLyricAlign('RIGHT')">Kanan</div>
+              </div>
+            </div>
+
+            <!-- Slider Margin Kiri / Kanan -->
+            <div class="slider-header" style="margin-top: 14px;">
+              <span class="setting-label">Margin Kiri / Kanan</span>
+              <span class="slider-val-badge" id="lbl_margin">16 dp</span>
+            </div>
+            <input type="range" min="0" max="48" value="16" class="custom-slider" oninput="changeLyricMargin(this.value)">
+
+            <!-- Slider Jarak Antar Baris Lirik -->
+            <div class="slider-header" style="margin-top: 16px;">
+              <span class="setting-label">Jarak Antar Baris (Spacing)</span>
+              <span class="slider-val-badge" id="lbl_spacing">32 dp</span>
+            </div>
+            <input type="range" min="12" max="64" value="32" class="custom-slider" oninput="changeSpacing(this.value)">
+
+            <!-- Slider Jarak Baris Teks (Line Height Multiplier) -->
+            <div class="slider-header" style="margin-top: 16px;">
+              <span class="setting-label">Kerapatan Teks (Line Height)</span>
+              <span class="slider-val-badge" id="lbl_lineHeight">1.5x</span>
+            </div>
+            <input type="range" min="10" max="25" value="15" class="custom-slider" oninput="changeLineHeight(this.value)">
+
+          </div>
+
+          <!-- 3. KATEGORI: FONT LIRIK -->
+          <div class="section-title">Font Lirik</div>
+          <div class="settings-group" style="padding: 14px 16px;">
+            <div class="setting-label" style="margin-bottom: 6px;">Pilihan Jenis Font</div>
+            <div class="segmented-control" style="margin-bottom: 12px;">
+              <div class="segmented-pill active" id="font_DEFAULT" onclick="setFontFamily('DEFAULT')">Default</div>
+              <div class="segmented-pill" id="font_SANS_SERIF" onclick="setFontFamily('SANS_SERIF')">Sans</div>
+              <div class="segmented-pill" id="font_SERIF" onclick="setFontFamily('SERIF')">Serif</div>
+              <div class="segmented-pill" id="font_MONOSPACE" onclick="setFontFamily('MONOSPACE')">Mono</div>
+              <div class="segmented-pill" id="font_CUSTOM" onclick="setFontFamily('CUSTOM')">Custom</div>
+            </div>
+
+            <div id="customFontSection" style="display:none; padding:10px 12px; background:var(--surface-slate); border-radius:10px; border:1px solid #28322C;">
+              <div style="font-size:12px; color:var(--text-sec); margin-bottom:8px;">Pilih file font TTF / OTF dari memori HP Anda:</div>
+              <button class="header-action-btn primary" style="width:100%; justify-content:center; padding:8px;" onclick="alert('Membuka file picker font (.ttf / .otf)...')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                <span>Pilih Font Sendiri (TTF/OTF)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. KATEGORI: TIPOGRAFI -->
+          <div class="section-title">Tipografi & Ukuran</div>
+          <div class="settings-group">
+            
+            <!-- Slider Ukuran Font Baris Aktif -->
+            <div class="slider-row">
+              <div class="slider-header">
+                <span class="setting-label">Ukuran Font Baris Aktif</span>
+                <span class="slider-val-badge" id="lbl_fontSizeActive">24 sp</span>
+              </div>
+              <input type="range" min="14" max="40" value="24" class="custom-slider" oninput="changeLyricFontSize(this.value)">
+            </div>
+
+            <!-- Switch: Ukuran Font Sama -->
+            <div class="setting-item" onclick="toggleSameFontSize()">
+              <div class="setting-info">
+                <div class="setting-label">Ukuran Font Sama</div>
+                <div class="setting-sublabel">Gunakan ukuran yang sama untuk semua baris lirik</div>
+              </div>
+              <div class="setting-trailing">
+                <div class="toggle-switch" id="sameFontSwitch"></div>
+              </div>
+            </div>
+
+            <!-- Slider: Ukuran Font Lainnya -->
+            <div class="slider-row" id="otherFontSizeRow" style="border-top:1px solid var(--divider-slate);">
+              <div class="slider-header">
+                <span class="setting-label">Ukuran Font Baris Lainnya</span>
+                <span class="slider-val-badge" id="lbl_fontSizeOther">18 sp</span>
+              </div>
+              <input type="range" min="10" max="32" value="18" class="custom-slider" oninput="changeOtherFontSize(this.value)">
+            </div>
+
+            <!-- Slider: Jumlah Baris Sekitar -->
+            <div class="slider-row" style="border-top:1px solid var(--divider-slate);">
+              <div class="slider-header">
+                <span class="setting-label">Jumlah Baris Sekitar</span>
+                <span class="slider-val-badge" id="lbl_contextLines">3 Baris</span>
+              </div>
+              <input type="range" min="1" max="6" value="3" class="custom-slider" oninput="changeContextLines(this.value)">
+            </div>
+
+          </div>
+
+          <!-- 5. KATEGORI: WARNA DAN EFEK -->
+          <div class="section-title">Warna & Efek Visual</div>
+          <div class="settings-group">
+            
+            <!-- Switch: Warna Dominan Album Art -->
+            <div class="setting-item" onclick="toggleDominantColor()">
+              <div class="setting-info">
+                <div class="setting-label">Warna Dominan Album Art</div>
+                <div class="setting-sublabel">Sesuaikan warna lirik dengan sampul lagu yang diputar</div>
+              </div>
+              <div class="setting-trailing">
+                <div class="toggle-switch active" id="dominantColorSwitch"></div>
+              </div>
+            </div>
+
+            <!-- Manual Color Pickers (Enabled when dominant color is off) -->
+            <div id="manualColorsGroup" style="display:none; border-top:1px solid var(--divider-slate);">
+              
+              <div class="setting-item" onclick="openColorPickerDialog('Baris Aktif', '#10B981')">
+                <div class="setting-info">
+                  <div class="setting-label">Warna Baris Aktif</div>
+                  <div class="setting-sublabel">Warna lirik lagu yang sedang berbunyi</div>
+                </div>
+                <div class="setting-trailing">
+                  <div class="color-swatch-circle" id="swatch_active" style="background:#10B981;"></div>
+                </div>
+              </div>
+
+              <div class="setting-item" onclick="openColorPickerDialog('Baris Tidak Aktif', '#888888')">
+                <div class="setting-info">
+                  <div class="setting-label">Warna Baris Tidak Aktif</div>
+                  <div class="setting-sublabel">Warna baris lirik sebelum dan sesudahnya</div>
+                </div>
+                <div class="setting-trailing">
+                  <div class="color-swatch-circle" id="swatch_inactive" style="background:#888888;"></div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Efek Memudar (Fade Effect) -->
+            <div style="padding: 14px 16px; border-top:1px solid var(--divider-slate);">
+              <div class="setting-label" style="margin-bottom: 6px;">Efek Memudar (Fade Effect)</div>
+              <div class="segmented-control">
+                <div class="segmented-pill active" id="fade_SMOOTH" onclick="setFade('SMOOTH')">Halus</div>
+                <div class="segmented-pill" id="fade_SHARP" onclick="setFade('SHARP')">Tajam</div>
+                <div class="segmented-pill" id="fade_NONE" onclick="setFade('NONE')">Mati</div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ================= DIALOG 1: INPUT ANGKA BATAS LAGU ================= -->
+    <div class="modal-backdrop" id="numberDialog" onclick="closeDialogIfBackdrop(event)">
+      <div class="dialog-card">
+        <div class="dialog-title" id="numDiagTitle">Batas Lagu</div>
+        <div class="dialog-desc" id="numDiagDesc">Tentukan batas maksimal lagu. Masukkan 0 untuk tanpa batas.</div>
+        <input type="number" id="numDiagInput" class="dialog-textfield" value="50">
+        <div class="dialog-actions">
+          <button class="btn-dialog cancel" onclick="closeNumberDialog()">Batal</button>
+          <button class="btn-dialog confirm" onclick="saveNumberDialog()">Simpan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DIALOG 2: TAMBAH TAB / SUBTAB CUSTOM (DENGAN PILIHAN IKON & ROLE) ================= -->
+    <div class="modal-backdrop" id="addTabDialog" onclick="closeDialogIfBackdrop(event)">
+      <div class="dialog-card" style="max-width:340px;">
+        <div class="dialog-title">Tambah Tab / Subtab</div>
+        <div class="dialog-desc">Tentukan nama, posisi hierarki, dan ikon untuk tab baru:</div>
+
+        <div style="font-size:11px; color:var(--text-sec); margin-bottom:4px;">Nama Tab / Subtab:</div>
+        <input type="text" id="newTabNameInput" class="dialog-textfield" placeholder="Contoh: Santai, Workout, DJ Mix..." style="margin-bottom:12px;">
+
+        <div style="font-size:11px; color:var(--text-sec); margin-bottom:4px;">Peran Hierarki:</div>
+        <div class="segmented-control" style="margin-bottom: 12px;">
+          <div class="segmented-pill active" id="pillRoleSub" onclick="selectNewTabRole('SUB')">↳ Subtab</div>
+          <div class="segmented-pill" id="pillRoleMain" onclick="selectNewTabRole('MAIN')">Tab Utama</div>
+        </div>
+
+        <!-- Pilihan Tab Utama Induk (Muncul jika peran = Subtab) -->
+        <div id="newParentMainTabGroup" style="margin-bottom: 12px;">
+          <div style="font-size:11px; color:var(--text-sec); margin-bottom:4px;">Pilih Tab Utama Induk:</div>
+          <select id="newParentMainTabSelect" class="dialog-textfield" style="cursor:pointer;">
+            <option value="Beranda">🏠 Beranda</option>
+            <option value="Lagu">🎵 Lagu</option>
+            <option value="Album">💿 Album</option>
+            <option value="Artis">👤 Artis</option>
+            <option value="Playlist">📋 Playlist</option>
+          </select>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <div style="font-size:11px; color:var(--text-sec);">Pilih Ikon:</div>
+          <div id="selectedIconBadge" style="font-size:13px; background:rgba(16,185,129,0.15); color:var(--emerald); padding:2px 8px; border-radius:12px; font-weight:600; display:flex; align-items:center; gap:4px;">
+            <span>Ikon:</span>
+            <span id="selectedIconPreview" style="font-size:16px;">🔥</span>
+          </div>
+        </div>
+
+        <!-- Grid Ikon Scroll Vertikal Saja (Tanpa scroll horizontal) -->
+        <div class="icon-grid" id="newIconGrid">
+          <button class="icon-choice-btn active" id="btnIcon_🔥" onclick="chooseNewTabIcon('🔥')">🔥</button>
+          <button class="icon-choice-btn" id="btnIcon_⭐" onclick="chooseNewTabIcon('⭐')">⭐</button>
+          <button class="icon-choice-btn" id="btnIcon_🌙" onclick="chooseNewTabIcon('🌙')">🌙</button>
+          <button class="icon-choice-btn" id="btnIcon_🎮" onclick="chooseNewTabIcon('🎮')">🎮</button>
+          <button class="icon-choice-btn" id="btnIcon_🏋️" onclick="chooseNewTabIcon('🏋️')">🏋️</button>
+          <button class="icon-choice-btn" id="btnIcon_📖" onclick="chooseNewTabIcon('📖')">📖</button>
+          <button class="icon-choice-btn" id="btnIcon_🎸" onclick="chooseNewTabIcon('🎸')">🎸</button>
+          <button class="icon-choice-btn" id="btnIcon_🎧" onclick="chooseNewTabIcon('🎧')">🎧</button>
+          <button class="icon-choice-btn" id="btnIcon_📷" onclick="chooseNewTabIcon('📷')">📷</button>
+          <button class="icon-choice-btn" id="btnIcon_🎬" onclick="chooseNewTabIcon('🎬')">🎬</button>
+          <button class="icon-choice-btn" id="btnIcon_🚗" onclick="chooseNewTabIcon('🚗')">🚗</button>
+          <button class="icon-choice-btn" id="btnIcon_✈️" onclick="chooseNewTabIcon('✈️')">✈️</button>
+          <button class="icon-choice-btn" id="btnIcon_💻" onclick="chooseNewTabIcon('💻')">💻</button>
+          <button class="icon-choice-btn" id="btnIcon_🛒" onclick="chooseNewTabIcon('🛒')">🛒</button>
+          <button class="icon-choice-btn" id="btnIcon_💼" onclick="chooseNewTabIcon('💼')">💼</button>
+          <button class="icon-choice-btn" id="btnIcon_📁" onclick="chooseNewTabIcon('📁')">📁</button>
+          <button class="icon-choice-btn" id="btnIcon_❤️" onclick="chooseNewTabIcon('❤️')">❤️</button>
+          <button class="icon-choice-btn" id="btnIcon_⚡" onclick="chooseNewTabIcon('⚡')">⚡</button>
+          <button class="icon-choice-btn" id="btnIcon_☕" onclick="chooseNewTabIcon('☕')">☕</button>
+          <button class="icon-choice-btn" id="btnIcon_🏷️" onclick="chooseNewTabIcon('🏷️')">🏷️</button>
+          <button class="icon-choice-btn" id="btnIcon_🕒" onclick="chooseNewTabIcon('🕒')">🕒</button>
+          <button class="icon-choice-btn" id="btnIcon_📈" onclick="chooseNewTabIcon('📈')">📈</button>
+          <button class="icon-choice-btn" id="btnIcon_✨" onclick="chooseNewTabIcon('✨')">✨</button>
+          <button class="icon-choice-btn" id="btnIcon_📋" onclick="chooseNewTabIcon('📋')">📋</button>
+          <button class="icon-choice-btn" id="btnIcon_🎉" onclick="chooseNewTabIcon('🎉')">🎉</button>
+        </div>
+
+        <div class="dialog-actions" style="margin-top:14px;">
+          <button class="btn-dialog cancel" onclick="closeAddTabDialog()">Batal</button>
+          <button class="btn-dialog confirm" onclick="saveAddTab()">Tambah</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DIALOG 3: EDIT TAB (DENGAN ROLE, INDUK, IKON VERTIKAL & HAPUS) ================= -->
+    <div class="modal-backdrop" id="editTabDialog" onclick="closeDialogIfBackdrop(event)">
+      <div class="dialog-card" style="max-width:340px;">
+        <div class="dialog-title" id="editDialogTitle">Edit Tab: Favorit</div>
+        <div class="dialog-desc">Ubah nama, peran hierarki, atau ikon tab:</div>
+
+        <div style="font-size:11px; color:var(--text-sec); margin-bottom:4px;">Nama Tab:</div>
+        <input type="text" id="editTabNameInput" class="dialog-textfield" style="margin-bottom:12px;">
+
+        <div style="font-size:11px; color:var(--text-sec); margin-bottom:4px;">Peran Hierarki:</div>
+        <div class="segmented-control" style="margin-bottom: 12px;">
+          <div class="segmented-pill" id="pillEditRoleSub" onclick="selectEditTabRole('SUB')">↳ Subtab</div>
+          <div class="segmented-pill" id="pillEditRoleMain" onclick="selectEditTabRole('MAIN')">Tab Utama</div>
+        </div>
+
+        <!-- Pilihan Tab Utama Induk (Muncul jika peran = Subtab) -->
+        <div id="editParentMainTabGroup" style="margin-bottom: 12px;">
+          <div style="font-size:11px; color:var(--text-sec); margin-bottom:4px;">Pilih Tab Utama Induk:</div>
+          <select id="editParentMainTabSelect" class="dialog-textfield" style="cursor:pointer;">
+            <option value="Beranda">🏠 Beranda</option>
+            <option value="Lagu">🎵 Lagu</option>
+            <option value="Album">💿 Album</option>
+            <option value="Artis">👤 Artis</option>
+            <option value="Playlist">📋 Playlist</option>
+          </select>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <div style="font-size:11px; color:var(--text-sec);">Pilih Ikon:</div>
+          <div id="selectedEditIconBadge" style="font-size:13px; background:rgba(16,185,129,0.15); color:var(--emerald); padding:2px 8px; border-radius:12px; font-weight:600; display:flex; align-items:center; gap:4px;">
+            <span>Ikon:</span>
+            <span id="selectedEditIconPreview" style="font-size:16px;">❤️</span>
+          </div>
+        </div>
+
+        <!-- Grid Ikon Scroll Vertikal Saja (Tanpa scroll horizontal) -->
+        <div class="icon-grid" id="editIconGrid">
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🔥')">🔥</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('⭐')">⭐</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🌙')">🌙</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🎮')">🎮</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🏋️')">🏋️</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('📖')">📖</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🎸')">🎸</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🎧')">🎧</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('📷')">📷</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🎬')">🎬</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🚗')">🚗</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('✈️')">✈️</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('💻')">💻</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🛒')">🛒</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('💼')">💼</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('📁')">📁</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('❤️')">❤️</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('⚡')">⚡</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('☕')">☕</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🏷️')">🏷️</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🕒')">🕒</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('📈')">📈</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('✨')">✨</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('📋')">📋</button>
+          <button class="icon-choice-btn" onclick="chooseEditTabIcon('🎉')">🎉</button>
+        </div>
+
+        <div class="dialog-actions" style="margin-top:14px; display:flex; justify-content:space-between; align-items:center;">
+          <button class="btn-dialog" id="btnDeleteTabInDialog" style="background:rgba(239,68,68,0.15); color:#EF4444;" onclick="deleteTabFromEditDialog()">Hapus Tab</button>
+          <div style="display:flex; gap:8px; margin-left:auto;">
+            <button class="btn-dialog cancel" onclick="closeEditTabDialog()">Batal</button>
+            <button class="btn-dialog confirm" onclick="saveEditTab()">Simpan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DIALOG 4: RESET PENGATURAN TAB ================= -->
+    <div class="modal-backdrop" id="resetDialog" onclick="closeDialogIfBackdrop(event)">
+      <div class="dialog-card">
+        <div class="dialog-title">Reset Pengaturan Tab</div>
+        <div class="dialog-desc">Apakah Anda yakin ingin mengembalikan urutan tab ke bawaan? Semua tab custom akan dihapus.</div>
+        <div class="dialog-actions">
+          <button class="btn-dialog cancel" onclick="closeResetDialog()">Batal</button>
+          <button class="btn-dialog confirm" style="background:#ef4444; color:#fff;" onclick="confirmResetTabs()">Reset</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DIALOG 5: DAFTAR HITAM FOLDER ================= -->
+    <div class="modal-backdrop" id="blacklistDialog" onclick="closeDialogIfBackdrop(event)">
+      <div class="dialog-card">
+        <div class="dialog-title">Daftar Hitam Folder</div>
+        <div class="dialog-desc">Centang folder yang ingin disembunyikan agar lagunya tidak terbaca oleh Flora:</div>
+        
+        <div class="folder-list">
+          <label class="folder-item">
+            <input type="checkbox" checked style="accent-color:var(--emerald);">
+            <span>/storage/emulated/0/WhatsApp/Media</span>
+          </label>
+          <label class="folder-item">
+            <input type="checkbox" style="accent-color:var(--emerald);">
+            <span>/storage/emulated/0/Download/Ringtones</span>
+          </label>
+          <label class="folder-item">
+            <input type="checkbox" style="accent-color:var(--emerald);">
+            <span>/storage/emulated/0/Notifications</span>
+          </label>
+        </div>
+
+        <div class="dialog-actions">
+          <button class="btn-dialog cancel" onclick="closeFolderBlacklistDialog()">Batal</button>
+          <button class="btn-dialog confirm" onclick="closeFolderBlacklistDialog()">Simpan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ================= DIALOG 6: COLOR PICKER (ROUND COLOR WHEEL + SLIDERS + HEX) ================= -->
+    <div class="modal-backdrop" id="colorPickerDialog" onclick="closeDialogIfBackdrop(event)">
+      <div class="dialog-card" style="max-width: 330px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div class="dialog-title" id="colorPickerTitle" style="margin-bottom:0;">Pilih Warna Lirik</div>
+          <div id="colorPreviewCircleSmall" style="width:24px; height:24px; border-radius:50%; background:#10B981; border:2px solid #fff; box-shadow:0 0 6px rgba(0,0,0,0.6);"></div>
+        </div>
+        <div class="dialog-desc" style="margin-bottom:12px;">Pilih warna menggunakan roda bulat atau masukkan kode HEX:</div>
+
+        <!-- Mode Segmented Control: Round vs Linear Sliders -->
+        <div class="segmented-control" style="margin-bottom: 14px;">
+          <div class="segmented-pill active" id="pillColorRound" onclick="setColorPickerMode('round')">Roda Warna (Round)</div>
+          <div class="segmented-pill" id="pillColorSliders" onclick="setColorPickerMode('sliders')">Slider Linear</div>
+        </div>
+
+        <!-- MODE 1: ROUND COLOR PICKER (COLOR WHEEL) -->
+        <div id="colorWheelSection" style="display:flex; flex-direction:column; align-items:center; margin-bottom:12px;">
+          <div style="position:relative; width:170px; height:170px; cursor:crosshair; user-select:none;" id="wheelContainer">
+            <canvas id="colorWheelCanvas" width="170" height="170" style="border-radius:50%; box-shadow:0 4px 16px rgba(0,0,0,0.6); display:block;"></canvas>
+            <div id="wheelCursor" style="position:absolute; width:18px; height:18px; border-radius:50%; border:2.5px solid #fff; box-shadow:0 0 5px rgba(0,0,0,0.9); transform:translate(-50%, -50%); pointer-events:none; top:85px; left:85px;"></div>
+          </div>
+          
+          <!-- Slider Kecerahan / Value -->
+          <div style="width:100%; margin-top:12px;">
+            <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-sec); margin-bottom:4px;">
+              <span>Kecerahan (Value)</span>
+              <span id="lbl_wheelVal">100%</span>
+            </div>
+            <input type="range" id="wheelValSlider" min="10" max="100" value="100" class="custom-slider" oninput="onWheelValChange(this.value)">
+          </div>
+        </div>
+
+        <!-- MODE 2: LINEAR SLIDERS (Hue, Saturation, Value) -->
+        <div id="colorSlidersSection" style="display:none; margin-bottom:12px;">
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-sec); margin-bottom:4px;">
+            <span>Hue (Warna)</span>
+            <span id="lbl_sliderHue">160°</span>
+          </div>
+          <input type="range" id="linearHueSlider" min="0" max="360" value="160" class="custom-slider" style="margin-bottom:8px;" oninput="onLinearSliderChange()">
+          
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-sec); margin-bottom:4px;">
+            <span>Saturasi</span>
+            <span id="lbl_sliderSat">100%</span>
+          </div>
+          <input type="range" id="linearSatSlider" min="0" max="100" value="100" class="custom-slider" style="margin-bottom:8px;" oninput="onLinearSliderChange()">
+
+          <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-sec); margin-bottom:4px;">
+            <span>Kecerahan</span>
+            <span id="lbl_sliderVal">100%</span>
+          </div>
+          <input type="range" id="linearValSlider" min="10" max="100" value="100" class="custom-slider" oninput="onLinearSliderChange()">
+        </div>
+
+        <!-- PALET WARNA CEPAT (PRESETS) -->
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px; color:var(--text-sec); margin-bottom:6px;">Warna Cepat:</div>
+          <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+            <div class="color-preset-dot" style="background:#10B981;" title="Emerald" onclick="applyPresetColor('#10B981')"></div>
+            <div class="color-preset-dot" style="background:#34D399;" title="Mint" onclick="applyPresetColor('#34D399')"></div>
+            <div class="color-preset-dot" style="background:#38BDF8;" title="Sky Blue" onclick="applyPresetColor('#38BDF8')"></div>
+            <div class="color-preset-dot" style="background:#F43F5E;" title="Rose" onclick="applyPresetColor('#F43F5E')"></div>
+            <div class="color-preset-dot" style="background:#F59E0B;" title="Amber" onclick="applyPresetColor('#F59E0B')"></div>
+            <div class="color-preset-dot" style="background:#A855F7;" title="Purple" onclick="applyPresetColor('#A855F7')"></div>
+            <div class="color-preset-dot" style="background:#FFFFFF;" title="White" onclick="applyPresetColor('#FFFFFF')"></div>
+            <div class="color-preset-dot" style="background:#9CA3AF;" title="Gray" onclick="applyPresetColor('#9CA3AF')"></div>
+          </div>
+        </div>
+
+        <!-- HEX INPUT & LIVE PREVIEW -->
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+          <div id="colorPreviewBox" style="width:44px; height:44px; border-radius:10px; background:#10B981; border:2px solid #313B35; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>
+          <div style="flex:1;">
+            <div style="font-size:11px; color:var(--text-sec); margin-bottom:3px;">Kode HEX Manual:</div>
+            <input type="text" id="hexColorInput" class="dialog-textfield" value="#10B981" maxlength="9" oninput="onHexInputChange(this.value)">
+          </div>
+        </div>
+
+        <div class="dialog-actions">
+          <button class="btn-dialog cancel" onclick="closeColorPicker()">Batal</button>
+          <button class="btn-dialog confirm" onclick="saveColorPicker()">Terapkan</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentScreenIdx = 0;
+    let activeDialogTarget = '';
+    let activeColorTarget = '';
+
+    const state = {
+      historyLimit: 50,
+      mostPlayedLimit: 50,
+      recentNum: 1,
+      recentUnit: 'Minggu',
+      lyricPos: 'CENTER',
+      lyricAlign: 'CENTER',
+      lyricMargin: 16,
+      lyricSpacing: 32,
+      lyricLineHeight: 1.5,
+      lyricFont: 'DEFAULT',
+      lyricActiveSize: 24,
+      lyricOtherSize: 18,
+      lyricSameSize: false,
+      lyricContextLines: 3,
+      lyricDominantColor: true,
+      lyricActiveColor: '#10B981',
+      lyricInactiveColor: '#888888',
+      fadeEffect: 'SMOOTH'
+    };
+
+    function switchScreen(idx) {
+      currentScreenIdx = idx;
+      document.getElementById('screenSlider').style.transform = `translateX(-${idx * 25}%)`;
+      
+      document.querySelectorAll('.nav-tab-btn').forEach((btn, i) => {
+        btn.classList.toggle('active', i === idx);
+      });
+    }
+
+    function toggleSwitch(id) {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('active');
+    }
+
+    /* Batas Lagu Handlers */
+    function openNumberDialog(label, targetKey) {
+      activeDialogTarget = targetKey;
+      document.getElementById('numDiagTitle').innerText = 'Batas Lagu ' + label;
+      document.getElementById('numDiagInput').value = state[targetKey];
+      document.getElementById('numberDialog').classList.add('show');
+    }
+
+    function closeNumberDialog() {
+      document.getElementById('numberDialog').classList.remove('show');
+    }
+
+    function saveNumberDialog() {
+      const val = parseInt(document.getElementById('numDiagInput').value) || 0;
+      state[activeDialogTarget] = Math.max(0, val);
+      
+      if (activeDialogTarget === 'historyLimit') {
+        document.getElementById('val_history').innerText = val === 0 ? 'Tanpa Batas' : val + ' Lagu';
+      } else if (activeDialogTarget === 'mostPlayedLimit') {
+        document.getElementById('val_mostPlayed').innerText = val === 0 ? 'Tanpa Batas' : val + ' Lagu';
+      }
+      closeNumberDialog();
+    }
+
+    function stepRecent(delta) {
+      state.recentNum = Math.max(1, state.recentNum + delta);
+      document.getElementById('inp_recentNum').value = state.recentNum;
+      updateRecentLabel();
+    }
+
+    function changeRecentNum(val) {
+      state.recentNum = Math.max(1, parseInt(val) || 1);
+      document.getElementById('inp_recentNum').value = state.recentNum;
+      updateRecentLabel();
+    }
+
+    function setRecentUnit(unit) {
+      state.recentUnit = unit;
+      ['Hari', 'Minggu', 'Bulan', 'Tahun'].forEach(u => {
+        const el = document.getElementById('unit_' + u);
+        if (el) el.classList.toggle('active', u === unit);
+      });
+      updateRecentLabel();
+    }
+
+    function updateRecentLabel() {
+      document.getElementById('label_recentUnit').innerText = `${state.recentNum} ${state.recentUnit} terakhir`;
+    }
+
+    /* Tab Settings Handlers */
+    let newTabSelectedIcon = '🔥';
+    let newTabSelectedRole = 'SUB';
+
+    // Edit Dialog State
+    let currentEditingRow = null;
+    let editSelectedIcon = '🔥';
+    let editSelectedRole = 'SUB';
+    let editIsCustom = false;
+
+    function toggleTabRole(chipEl) {
+      const row = chipEl.closest('.tab-card-row');
+      if (!row) return;
+      const arrow = row.querySelector('.subtab-arrow');
+      const sublabel = row.querySelector('.setting-sublabel');
+
+      if (chipEl.innerText === 'Subtab') {
+        chipEl.innerText = 'Utama';
+        chipEl.style.background = 'var(--surface-slate)';
+        row.classList.remove('subtab');
+        if (arrow) arrow.style.display = 'none';
+        if (sublabel && sublabel.innerText.includes('Subtab')) {
+          sublabel.innerText = 'Tab Utama';
+        }
+      } else {
+        chipEl.innerText = 'Subtab';
+        chipEl.style.background = 'rgba(16,185,129,0.12)';
+        row.classList.add('subtab');
+        if (arrow) arrow.style.display = 'inline';
+        if (sublabel && sublabel.innerText.includes('Tab Utama')) {
+          sublabel.innerText = 'Subtab di dalam Beranda';
+        }
+      }
+    }
+
+    /* Tambah Tab Dialog */
+    function selectNewTabRole(role) {
+      newTabSelectedRole = role;
+      document.getElementById('pillRoleSub').classList.toggle('active', role === 'SUB');
+      document.getElementById('pillRoleMain').classList.toggle('active', role === 'MAIN');
+      document.getElementById('newParentMainTabGroup').style.display = (role === 'SUB') ? 'block' : 'none';
+    }
+
+    function chooseNewTabIcon(icon) {
+      newTabSelectedIcon = icon;
+      const preview = document.getElementById('selectedIconPreview');
+      if (preview) preview.innerText = icon;
+      const allBtns = document.querySelectorAll('#newIconGrid .icon-choice-btn');
+      allBtns.forEach(b => {
+        b.classList.toggle('active', b.innerText.trim() === icon);
+      });
+    }
+
+    function openAddTabDialog() {
+      document.getElementById('newTabNameInput').value = '';
+      selectNewTabRole('SUB');
+      chooseNewTabIcon('🔥');
+      document.getElementById('addTabDialog').classList.add('show');
+    }
+
+    function closeAddTabDialog() {
+      document.getElementById('addTabDialog').classList.remove('show');
+    }
+
+    function saveAddTab() {
+      const name = document.getElementById('newTabNameInput').value.trim();
+      if (!name) return alert('Nama tab/subtab tidak boleh kosong!');
+
+      const isSub = (newTabSelectedRole === 'SUB');
+      const parentName = document.getElementById('newParentMainTabSelect').value || 'Beranda';
+      const container = document.getElementById('activeTabsList');
+
+      const row = document.createElement('div');
+      row.className = 'tab-card-row' + (isSub ? ' subtab' : '');
+      const uniqueId = 'tabRow_custom_' + Date.now();
+      row.id = uniqueId;
+
+      row.innerHTML = `
+        <div class="tab-icon-box" style="${isSub ? 'width:28px; height:28px; font-size:13px;' : ''}">${newTabSelectedIcon}</div>
+        <div class="setting-info">
+          <div class="setting-label" style="display:flex; align-items:center; gap:6px;">
+            <span class="subtab-arrow" style="color:var(--emerald); ${isSub ? '' : 'display:none;'}">↳</span>
+            <span class="tab-name-text">${name}</span>
+            <span class="badge-chip">Custom</span>
+          </div>
+          <div class="setting-sublabel">${isSub ? 'Subtab di dalam ' + parentName : 'Tab Kustom (Utama)'}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:4px;">
+          <span class="tab-role-chip" style="${isSub ? 'background:rgba(16,185,129,0.12);' : ''}" onclick="toggleTabRole(this)">${isSub ? 'Subtab' : 'Utama'}</span>
+          <button class="tab-edit-btn" title="Edit Tab" onclick="openEditTabDialog('${name}', '${newTabSelectedIcon}', '${newTabSelectedRole}', '${parentName}', true, this.closest('.tab-card-row'))">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </button>
+        </div>
+      `;
+
+      if (container) {
+        container.appendChild(row);
+      }
+
+      closeAddTabDialog();
+    }
+
+    /* Edit Tab Dialog */
+    function openEditTabDialog(name, icon, role, parent, isCustom, rowEl) {
+      currentEditingRow = rowEl || document.getElementById('tabRow_' + name);
+      editSelectedIcon = icon || '🔥';
+      editSelectedRole = role || 'SUB';
+      editIsCustom = isCustom;
+
+      document.getElementById('editDialogTitle').innerText = 'Edit Tab: ' + name;
+      const nameInput = document.getElementById('editTabNameInput');
+      nameInput.value = name;
+      nameInput.disabled = !isCustom;
+      nameInput.style.opacity = isCustom ? '1' : '0.6';
+      nameInput.title = isCustom ? '' : 'Nama tab bawaan tidak dapat diubah';
+
+      selectEditTabRole(role);
+
+      const parentSelect = document.getElementById('editParentMainTabSelect');
+      if (parentSelect) parentSelect.value = parent || 'Beranda';
+
+      chooseEditTabIcon(editSelectedIcon);
+
+      // Opsi hapus HANYA ditampilkan untuk tab custom
+      const deleteBtn = document.getElementById('btnDeleteTabInDialog');
+      if (deleteBtn) {
+        deleteBtn.style.display = isCustom ? 'block' : 'none';
+      }
+
+      document.getElementById('editTabDialog').classList.add('show');
+    }
+
+    function selectEditTabRole(role) {
+      editSelectedRole = role;
+      document.getElementById('pillEditRoleSub').classList.toggle('active', role === 'SUB');
+      document.getElementById('pillEditRoleMain').classList.toggle('active', role === 'MAIN');
+      document.getElementById('editParentMainTabGroup').style.display = (role === 'SUB') ? 'block' : 'none';
+    }
+
+    function chooseEditTabIcon(icon) {
+      editSelectedIcon = icon;
+      const preview = document.getElementById('selectedEditIconPreview');
+      if (preview) preview.innerText = icon;
+      const allBtns = document.querySelectorAll('#editIconGrid .icon-choice-btn');
+      allBtns.forEach(b => {
+        b.classList.toggle('active', b.innerText.trim() === icon);
+      });
+    }
+
+    function closeEditTabDialog() {
+      document.getElementById('editTabDialog').classList.remove('show');
+    }
+
+    function saveEditTab() {
+      if (!currentEditingRow) return closeEditTabDialog();
+
+      const newName = document.getElementById('editTabNameInput').value.trim();
+      if (!newName) return alert('Nama tab tidak boleh kosong!');
+
+      const isSub = (editSelectedRole === 'SUB');
+      const parentName = document.getElementById('editParentMainTabSelect').value || 'Beranda';
+
+      // Update name
+      const nameEl = currentEditingRow.querySelector('.tab-name-text');
+      if (nameEl) nameEl.innerText = newName;
+
+      // Update icon
+      const iconBox = currentEditingRow.querySelector('.tab-icon-box');
+      if (iconBox) {
+        iconBox.innerText = editSelectedIcon;
+        iconBox.style.width = isSub ? '28px' : '32px';
+        iconBox.style.height = isSub ? '28px' : '32px';
+        iconBox.style.fontSize = isSub ? '13px' : '14px';
+      }
+
+      // Update role & subtitle
+      const arrow = currentEditingRow.querySelector('.subtab-arrow');
+      const sublabel = currentEditingRow.querySelector('.setting-sublabel');
+      const chip = currentEditingRow.querySelector('.tab-role-chip');
+
+      if (isSub) {
+        currentEditingRow.classList.add('subtab');
+        if (arrow) arrow.style.display = 'inline';
+        if (sublabel) sublabel.innerText = 'Subtab di dalam ' + parentName;
+        if (chip) {
+          chip.innerText = 'Subtab';
+          chip.style.background = 'rgba(16,185,129,0.12)';
+        }
+      } else {
+        currentEditingRow.classList.remove('subtab');
+        if (arrow) arrow.style.display = 'none';
+        if (sublabel) sublabel.innerText = editIsCustom ? 'Tab Kustom (Utama)' : 'Tab Utama';
+        if (chip) {
+          chip.innerText = 'Utama';
+          chip.style.background = 'var(--surface-slate)';
+        }
+      }
+
+      closeEditTabDialog();
+    }
+
+    function deleteTabFromEditDialog() {
+      if (currentEditingRow) {
+        currentEditingRow.remove();
+      }
+      closeEditTabDialog();
+    }
+
+    function openResetDialog() {
+      document.getElementById('resetDialog').classList.add('show');
+    }
+    function closeResetDialog() {
+      document.getElementById('resetDialog').classList.remove('show');
+    }
+    function confirmResetTabs() {
+      alert('Pengaturan tab telah direset ke bawaan default.');
+      closeResetDialog();
+    }
+
+    /* Folder Blacklist Dialog Handlers */
+    function openFolderBlacklistDialog() {
+      document.getElementById('blacklistDialog').classList.add('show');
+    }
+    function closeFolderBlacklistDialog() {
+      document.getElementById('blacklistDialog').classList.remove('show');
+    }
+
+    /* Lyrics Settings Handlers & Live Preview Sync */
+    function setLyricPos(pos) {
+      state.lyricPos = pos;
+      ['TOP', 'CENTER', 'BOTTOM'].forEach(p => {
+        document.getElementById('pos_' + p).classList.toggle('active', p === pos);
+      });
+
+      const box = document.getElementById('lyricsPreviewContainer');
+      if (pos === 'TOP') box.style.justifyContent = 'flex-start';
+      else if (pos === 'CENTER') box.style.justifyContent = 'center';
+      else if (pos === 'BOTTOM') box.style.justifyContent = 'flex-end';
+    }
+
+    function setLyricAlign(align) {
+      state.lyricAlign = align;
+      ['LEFT', 'CENTER', 'RIGHT'].forEach(a => {
+        document.getElementById('align_' + a).classList.toggle('active', a === align);
+      });
+
+      const box = document.getElementById('lyricsPreviewContainer');
+      if (align === 'LEFT') box.style.alignItems = 'flex-start';
+      else if (align === 'CENTER') box.style.alignItems = 'center';
+      else if (align === 'RIGHT') box.style.alignItems = 'flex-end';
+    }
+
+    function changeLyricMargin(val) {
+      state.lyricMargin = val;
+      document.getElementById('lbl_margin').innerText = val + ' dp';
+      document.getElementById('lyricsPreviewContainer').style.paddingLeft = (val * 0.8) + 'px';
+      document.getElementById('lyricsPreviewContainer').style.paddingRight = (val * 0.8) + 'px';
+    }
+
+    function changeSpacing(val) {
+      state.lyricSpacing = val;
+      document.getElementById('lbl_spacing').innerText = val + ' dp';
+      document.getElementById('prev_activeLine').style.margin = (val * 0.2) + 'px 0';
+    }
+
+    function changeLineHeight(val) {
+      const mult = (val / 10).toFixed(1);
+      state.lyricLineHeight = mult;
+      document.getElementById('lbl_lineHeight').innerText = mult + 'x';
+      document.getElementById('prev_activeLine').style.lineHeight = mult;
+    }
+
+    function setFontFamily(font) {
+      state.lyricFont = font;
+      ['DEFAULT', 'SANS_SERIF', 'SERIF', 'MONOSPACE', 'CUSTOM'].forEach(f => {
+        document.getElementById('font_' + f).classList.toggle('active', f === font);
+      });
+
+      const customBox = document.getElementById('customFontSection');
+      customBox.style.display = font === 'CUSTOM' ? 'block' : 'none';
+
+      const prevBox = document.getElementById('lyricsPreviewContainer');
+      if (font === 'SERIF') prevBox.style.fontFamily = 'Georgia, serif';
+      else if (font === 'MONOSPACE') prevBox.style.fontFamily = 'Courier New, monospace';
+      else prevBox.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    }
+
+    function changeLyricFontSize(val) {
+      state.lyricActiveSize = val;
+      document.getElementById('lbl_fontSizeActive').innerText = val + ' sp';
+      document.getElementById('prev_activeLine').style.fontSize = (val * 0.72) + 'px';
+      if (state.lyricSameSize) {
+        document.getElementById('prev_line1').style.fontSize = (val * 0.72) + 'px';
+        document.getElementById('prev_line2').style.fontSize = (val * 0.72) + 'px';
+      }
+    }
+
+    function toggleSameFontSize() {
+      state.lyricSameSize = !state.lyricSameSize;
+      document.getElementById('sameFontSwitch').classList.toggle('active', state.lyricSameSize);
+      
+      const otherRow = document.getElementById('otherFontSizeRow');
+      otherRow.style.opacity = state.lyricSameSize ? '0.35' : '1.0';
+      otherRow.style.pointerEvents = state.lyricSameSize ? 'none' : 'auto';
+
+      if (state.lyricSameSize) {
+        document.getElementById('prev_line1').style.fontSize = (state.lyricActiveSize * 0.72) + 'px';
+        document.getElementById('prev_line2').style.fontSize = (state.lyricActiveSize * 0.72) + 'px';
+      } else {
+        document.getElementById('prev_line1').style.fontSize = (state.lyricOtherSize * 0.65) + 'px';
+        document.getElementById('prev_line2').style.fontSize = (state.lyricOtherSize * 0.65) + 'px';
+      }
+    }
+
+    function changeOtherFontSize(val) {
+      state.lyricOtherSize = val;
+      document.getElementById('lbl_fontSizeOther').innerText = val + ' sp';
+      if (!state.lyricSameSize) {
+        document.getElementById('prev_line1').style.fontSize = (val * 0.65) + 'px';
+        document.getElementById('prev_line2').style.fontSize = (val * 0.65) + 'px';
+      }
+    }
+
+    function changeContextLines(val) {
+      state.lyricContextLines = val;
+      document.getElementById('lbl_contextLines').innerText = val + ' Baris';
+    }
+
+    function toggleDominantColor() {
+      state.lyricDominantColor = !state.lyricDominantColor;
+      document.getElementById('dominantColorSwitch').classList.toggle('active', state.lyricDominantColor);
+      document.getElementById('manualColorsGroup').style.display = state.lyricDominantColor ? 'none' : 'block';
+
+      if (state.lyricDominantColor) {
+        document.getElementById('prev_activeLine').style.color = '#10B981';
+      } else {
+        document.getElementById('prev_activeLine').style.color = state.lyricActiveColor;
+      }
+    }
+
+    // ================= COLOR PICKER SYSTEM (ROUND WHEEL + SLIDERS + HEX) =================
+    let pickerHue = 160;
+    let pickerSat = 0.9;
+    let pickerVal = 1.0;
+    let isDraggingWheel = false;
+    let colorPickerMode = 'round';
+
+    function hsvToRgb(h, s, v) {
+      let c = v * s;
+      let x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+      let m = v - c;
+      let r = 0, g = 0, b = 0;
+      if (h >= 0 && h < 60) { r = c; g = x; b = 0; }
+      else if (h >= 60 && h < 120) { r = x; g = c; b = 0; }
+      else if (h >= 120 && h < 180) { r = 0; g = c; b = x; }
+      else if (h >= 180 && h < 240) { r = 0; g = x; b = c; }
+      else if (h >= 240 && h < 300) { r = x; g = 0; b = c; }
+      else if (h >= 300 && h < 360) { r = c; g = 0; b = x; }
+      return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+    }
+
+    function rgbToHsv(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      let max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h = 0, s = 0, v = max;
+      let d = max - min;
+      s = max === 0 ? 0 : d / max;
+      if (max === min) {
+        h = 0;
+      } else {
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h = h * 60;
+      }
+      return { h: Math.round(h), s: s, v: v };
+    }
+
+    function rgbToHex(r, g, b) {
+      return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+    }
+
+    function hexToRgb(hex) {
+      if (!hex) return null;
+      let cleaned = hex.replace('#', '').trim();
+      if (cleaned.length === 8) cleaned = cleaned.substring(2); // strip alpha if AARRGGBB
+      if (cleaned.length === 3) cleaned = cleaned.split('').map(c => c + c).join('');
+      if (cleaned.length !== 6) return null;
+      const num = parseInt(cleaned, 16);
+      if (isNaN(num)) return null;
+      return {
+        r: (num >> 16) & 255,
+        g: (num >> 8) & 255,
+        b: num & 255
+      };
+    }
+
+    function renderColorWheel() {
+      const canvas = document.getElementById('colorWheelCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const size = 170;
+      const cx = size / 2;
+      const cy = size / 2;
+      const radius = cx - 2;
+
+      const imgData = ctx.createImageData(size, size);
+      const data = imgData.data;
+
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const dx = x - cx;
+          const dy = y - cy;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const idx = (y * size + x) * 4;
+
+          if (dist <= radius) {
+            let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            if (angle < 0) angle += 360;
+            const sat = Math.min(1, dist / radius);
+            const [r, g, b] = hsvToRgb(angle, sat, pickerVal);
+            data[idx] = r;
+            data[idx + 1] = g;
+            data[idx + 2] = b;
+            data[idx + 3] = 255;
+          } else {
+            data[idx + 3] = 0;
+          }
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      updateWheelCursorPos();
+    }
+
+    function updateWheelCursorPos() {
+      const cursor = document.getElementById('wheelCursor');
+      if (!cursor) return;
+      const size = 170;
+      const cx = size / 2;
+      const cy = size / 2;
+      const radius = cx - 2;
+
+      const rad = (pickerHue * Math.PI) / 180;
+      const dist = pickerSat * radius;
+      const x = cx + dist * Math.cos(rad);
+      const y = cy + dist * Math.sin(rad);
+
+      cursor.style.left = x + 'px';
+      cursor.style.top = y + 'px';
+      const [r, g, b] = hsvToRgb(pickerHue, pickerSat, pickerVal);
+      cursor.style.backgroundColor = `rgb(${r},${g},${b})`;
+    }
+
+    function handleWheelMove(clientX, clientY) {
+      const canvas = document.getElementById('colorWheelCanvas');
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const size = 170;
+      const cx = size / 2;
+      const cy = size / 2;
+      const radius = cx - 2;
+
+      const x = clientX - rect.left - cx;
+      const y = clientY - rect.top - cy;
+      let dist = Math.sqrt(x * x + y * y);
+      let angle = Math.atan2(y, x) * (180 / Math.PI);
+      if (angle < 0) angle += 360;
+
+      pickerHue = Math.round(angle);
+      pickerSat = Math.min(1, dist / radius);
+
+      syncColorFromHsv();
+    }
+
+    function syncColorFromHsv() {
+      const [r, g, b] = hsvToRgb(pickerHue, pickerSat, pickerVal);
+      const hex = rgbToHex(r, g, b);
+
+      // Update Preview UI
+      const prevBox = document.getElementById('colorPreviewBox');
+      const prevSmall = document.getElementById('colorPreviewCircleSmall');
+      const hexInput = document.getElementById('hexColorInput');
+      if (prevBox) prevBox.style.background = hex;
+      if (prevSmall) prevSmall.style.background = hex;
+      if (hexInput) hexInput.value = hex;
+
+      // Update Wheel UI
+      updateWheelCursorPos();
+      const lblWVal = document.getElementById('lbl_wheelVal');
+      const sliderWVal = document.getElementById('wheelValSlider');
+      if (lblWVal) lblWVal.innerText = Math.round(pickerVal * 100) + '%';
+      if (sliderWVal) sliderWVal.value = Math.round(pickerVal * 100);
+
+      // Update Sliders UI
+      const sliderHue = document.getElementById('linearHueSlider');
+      const lblHue = document.getElementById('lbl_sliderHue');
+      const sliderSat = document.getElementById('linearSatSlider');
+      const lblSat = document.getElementById('lbl_sliderSat');
+      const sliderVal = document.getElementById('linearValSlider');
+      const lblVal = document.getElementById('lbl_sliderVal');
+
+      if (sliderHue) sliderHue.value = pickerHue;
+      if (lblHue) lblHue.innerText = pickerHue + '°';
+      if (sliderSat) sliderSat.value = Math.round(pickerSat * 100);
+      if (lblSat) lblSat.innerText = Math.round(pickerSat * 100) + '%';
+      if (sliderVal) sliderVal.value = Math.round(pickerVal * 100);
+      if (lblVal) lblVal.innerText = Math.round(pickerVal * 100) + '%';
+    }
+
+    function onWheelValChange(val) {
+      pickerVal = val / 100;
+      renderColorWheel();
+      syncColorFromHsv();
+    }
+
+    function onLinearSliderChange() {
+      pickerHue = parseInt(document.getElementById('linearHueSlider').value);
+      pickerSat = parseInt(document.getElementById('linearSatSlider').value) / 100;
+      pickerVal = parseInt(document.getElementById('linearValSlider').value) / 100;
+      renderColorWheel();
+      syncColorFromHsv();
+    }
+
+    function onHexInputChange(hex) {
+      const rgb = hexToRgb(hex);
+      if (rgb) {
+        const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+        pickerHue = hsv.h;
+        pickerSat = hsv.s;
+        pickerVal = hsv.v;
+        renderColorWheel();
+        syncColorFromHsv();
+      }
+    }
+
+    function applyPresetColor(hex) {
+      onHexInputChange(hex);
+    }
+
+    function setColorPickerMode(mode) {
+      colorPickerMode = mode;
+      document.getElementById('pillColorRound').classList.toggle('active', mode === 'round');
+      document.getElementById('pillColorSliders').classList.toggle('active', mode === 'sliders');
+      document.getElementById('colorWheelSection').style.display = mode === 'round' ? 'flex' : 'none';
+      document.getElementById('colorSlidersSection').style.display = mode === 'sliders' ? 'block' : 'none';
+      if (mode === 'round') {
+        renderColorWheel();
+      }
+    }
+
+    function openColorPickerDialog(title, defaultHex) {
+      activeColorTarget = title;
+      document.getElementById('colorPickerTitle').innerText = 'Pilih Warna ' + title;
+      
+      const rgb = hexToRgb(defaultHex) || { r: 16, g: 185, b: 129 };
+      const hsv = rgbToHsv(rgb.r, rgb.g, rgb.b);
+      pickerHue = hsv.h;
+      pickerSat = hsv.s;
+      pickerVal = hsv.v;
+
+      setColorPickerMode('round');
+      renderColorWheel();
+      syncColorFromHsv();
+
+      document.getElementById('colorPickerDialog').classList.add('show');
+    }
+
+    function testRoundColorPicker() {
+      switchScreen(3);
+      setTimeout(() => {
+        const scr = document.getElementById('screen_lyrics');
+        if (scr) scr.scrollTop = scr.scrollHeight;
+        openColorPickerDialog('Baris Aktif', state.lyricActiveColor);
+      }, 200);
+    }
+
+    function closeColorPicker() {
+      document.getElementById('colorPickerDialog').classList.remove('show');
+    }
+
+    function saveColorPicker() {
+      const hex = document.getElementById('hexColorInput').value;
+      if (activeColorTarget === 'Baris Aktif') {
+        state.lyricActiveColor = hex;
+        document.getElementById('swatch_active').style.background = hex;
+        document.getElementById('prev_activeLine').style.color = hex;
+      } else {
+        state.lyricInactiveColor = hex;
+        document.getElementById('swatch_inactive').style.background = hex;
+        document.getElementById('prev_line1').style.color = hex;
+        document.getElementById('prev_line2').style.color = hex;
+      }
+      closeColorPicker();
+    }
+
+    function initColorWheelEvents() {
+      const container = document.getElementById('wheelContainer');
+      if (!container) return;
+
+      function onPointerDown(e) {
+        isDraggingWheel = true;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        handleWheelMove(clientX, clientY);
+      }
+
+      function onPointerMove(e) {
+        if (!isDraggingWheel) return;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        handleWheelMove(clientX, clientY);
+      }
+
+      function onPointerUp() {
+        isDraggingWheel = false;
+      }
+
+      container.addEventListener('mousedown', onPointerDown);
+      window.addEventListener('mousemove', onPointerMove);
+      window.addEventListener('mouseup', onPointerUp);
+
+      container.addEventListener('touchstart', onPointerDown, { passive: true });
+      window.addEventListener('touchmove', onPointerMove, { passive: true });
+      window.addEventListener('touchend', onPointerUp);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initColorWheelEvents();
+    });
+
+    function setFade(fade) {
+      state.fadeEffect = fade;
+      ['SMOOTH', 'SHARP', 'NONE'].forEach(f => {
+        document.getElementById('fade_' + f).classList.toggle('active', f === fade);
+      });
+
+      const op = fade === 'SMOOTH' ? '0.35' : (fade === 'SHARP' ? '0.12' : '1.0');
+      document.getElementById('prev_line1').style.opacity = op;
+      document.getElementById('prev_line2').style.opacity = op;
+    }
+
+    function closeDialogIfBackdrop(e) {
+      if (e.target.classList.contains('modal-backdrop')) {
+        e.target.classList.remove('show');
+      }
+    }
+  </script>
+</body>
+</html>

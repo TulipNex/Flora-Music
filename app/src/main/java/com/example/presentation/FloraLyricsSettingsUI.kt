@@ -31,6 +31,316 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.draw.clip
+
+@Composable
+fun <T> SegmentedPills(
+    options: List<Pair<T, String>>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color(0xFF1E2421))
+            .padding(3.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        options.forEach { (value, label) ->
+            val isSelected = selected == value
+            Surface(
+                onClick = { onSelect(value) },
+                shape = RoundedCornerShape(6.dp),
+                color = if (isSelected) EmeraldGreen else Color.Transparent,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.padding(vertical = 7.dp)
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 12.5.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) Color.Black else TextSecondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LyricsColorPickerDialog(
+    title: String,
+    initialColorHex: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var mode by remember { mutableStateOf("round") } // "round" or "sliders"
+    var customHexInput by remember { mutableStateOf(initialColorHex) }
+
+    var hue by remember { mutableFloatStateOf(0f) }
+    var saturation by remember { mutableFloatStateOf(1f) }
+    var brightness by remember { mutableFloatStateOf(1f) }
+    var alpha by remember { mutableFloatStateOf(1f) }
+
+    LaunchedEffect(initialColorHex) {
+        try {
+            val colorStr = if (initialColorHex.length == 7) initialColorHex.replace("#", "#FF") else initialColorHex
+            val colorInt = android.graphics.Color.parseColor(colorStr)
+            val hsv = FloatArray(3)
+            android.graphics.Color.colorToHSV(colorInt, hsv)
+            hue = hsv[0]
+            saturation = hsv[1]
+            brightness = hsv[2]
+            alpha = android.graphics.Color.alpha(colorInt) / 255f
+        } catch (e: Exception) {}
+    }
+
+    val updateHexFromHsv = {
+        val colorInt = android.graphics.Color.HSVToColor((alpha * 255).toInt(), floatArrayOf(hue, saturation, brightness))
+        customHexInput = String.format("#%08X", colorInt)
+    }
+
+    val quickPresets = listOf(
+        "#10B981", "#34D399", "#38BDF8", "#F43F5E",
+        "#F59E0B", "#A855F7", "#FFFFFF", "#9CA3AF"
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, color = Color.White, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Mode Switcher: [ Roda Bulat | Slider Linear ]
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF1E2421))
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Surface(
+                        onClick = { mode = "round" },
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (mode == "round") EmeraldGreen else Color.Transparent,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 6.dp)) {
+                            Text(
+                                "Roda Bulat",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (mode == "round") Color.Black else TextSecondary
+                            )
+                        }
+                    }
+                    Surface(
+                        onClick = { mode = "sliders" },
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (mode == "sliders") EmeraldGreen else Color.Transparent,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(vertical = 6.dp)) {
+                            Text(
+                                "Slider Linear",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (mode == "sliders") Color.Black else TextSecondary
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                if (mode == "round") {
+                    // MODE 1: Round Color Picker (Wheel)
+                    RoundColorPicker(
+                        hue = hue,
+                        saturation = saturation,
+                        value = brightness,
+                        onColorChange = { newHue, newSat ->
+                            hue = newHue
+                            saturation = newSat
+                            updateHexFromHsv()
+                        }
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        "Kecerahan: ${(brightness * 100).toInt()}%",
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    ValueSlider(
+                        hue = hue,
+                        saturation = saturation,
+                        value = brightness,
+                        onValueChange = {
+                            brightness = it
+                            updateHexFromHsv()
+                        }
+                    )
+                } else {
+                    // MODE 2: Linear Sliders
+                    Text("Hue (Warna)", color = Color.White, fontSize = 12.sp, modifier = Modifier.align(Alignment.Start))
+                    HueSlider(
+                        hue = hue,
+                        onHueChange = {
+                            hue = it
+                            updateHexFromHsv()
+                        }
+                    )
+                    Text("Saturasi", color = Color.White, fontSize = 12.sp, modifier = Modifier.align(Alignment.Start))
+                    SaturationSlider(
+                        hue = hue,
+                        saturation = saturation,
+                        value = brightness,
+                        onSaturationChange = {
+                            saturation = it
+                            updateHexFromHsv()
+                        }
+                    )
+                    Text("Kecerahan", color = Color.White, fontSize = 12.sp, modifier = Modifier.align(Alignment.Start))
+                    ValueSlider(
+                        hue = hue,
+                        saturation = saturation,
+                        value = brightness,
+                        onValueChange = {
+                            brightness = it
+                            updateHexFromHsv()
+                        }
+                    )
+                    Text("Transparansi (Alpha)", color = Color.White, fontSize = 12.sp, modifier = Modifier.align(Alignment.Start))
+                    val previewColorBase = try {
+                        Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, brightness)))
+                    } catch (e: Exception) { Color.White }
+                    AlphaSlider(
+                        color = previewColorBase,
+                        alpha = alpha,
+                        onAlphaChange = {
+                            alpha = it
+                            updateHexFromHsv()
+                        }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Quick presets
+                Text("Warna Cepat:", color = TextSecondary, fontSize = 12.sp, modifier = Modifier.align(Alignment.Start))
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    quickPresets.forEach { hex ->
+                        val presetColor = try { Color(android.graphics.Color.parseColor(hex)) } catch (e: Exception) { Color.White }
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(presetColor)
+                                .border(1.dp, Color(0xFF2E3832), CircleShape)
+                                .clickable {
+                                    customHexInput = hex
+                                    try {
+                                        val colorStr = if (hex.length == 7) hex.replace("#", "#FF") else hex
+                                        val colorInt = android.graphics.Color.parseColor(colorStr)
+                                        val hsv = FloatArray(3)
+                                        android.graphics.Color.colorToHSV(colorInt, hsv)
+                                        hue = hsv[0]
+                                        saturation = hsv[1]
+                                        brightness = hsv[2]
+                                        alpha = android.graphics.Color.alpha(colorInt) / 255f
+                                    } catch (e: Exception) {}
+                                }
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Manual HEX text field
+                OutlinedTextField(
+                    value = customHexInput,
+                    onValueChange = {
+                        customHexInput = it.uppercase()
+                        try {
+                            val colorStr = if (it.length == 7) it.replace("#", "#FF") else it
+                            val colorInt = android.graphics.Color.parseColor(colorStr)
+                            val hsv = FloatArray(3)
+                            android.graphics.Color.colorToHSV(colorInt, hsv)
+                            hue = hsv[0]
+                            saturation = hsv[1]
+                            brightness = hsv[2]
+                            alpha = android.graphics.Color.alpha(colorInt) / 255f
+                        } catch (e: Exception) {}
+                    },
+                    label = { Text("Kode HEX Manual", color = TextSecondary) },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedBorderColor = EmeraldGreen,
+                        unfocusedBorderColor = CardSlate
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Preview box
+                val previewColor = try { Color(android.graphics.Color.parseColor(customHexInput)) } catch (e: Exception) { Color.Transparent }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(38.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(previewColor)
+                        .border(1.dp, Color(0xFF2E3832), RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (previewColor == Color.Transparent) {
+                        Text("Kode warna tidak valid", color = Color.White, fontSize = 12.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    try {
+                        android.graphics.Color.parseColor(customHexInput)
+                        onConfirm(customHexInput)
+                    } catch (e: Exception) {}
+                }
+            ) {
+                Text("Terapkan", color = EmeraldGreen, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal", color = TextSecondary)
+            }
+        },
+        containerColor = CardSlate
+    )
+}
+
 @Composable
 fun SettingsSectionTitle(title: String) {
     Text(
@@ -105,13 +415,8 @@ fun LyricsSettingsScreen(
         }
     }
     
-    var showAlignmentDialog by remember { mutableStateOf(false) }
-    var showPositionDialog by remember { mutableStateOf(false) }
-    var showFadeDialog by remember { mutableStateOf(false) }
     var showActiveColorDialog by remember { mutableStateOf(false) }
     var showInactiveColorDialog by remember { mutableStateOf(false) }
-    var customActiveColorInput by remember { mutableStateOf(lyricsActiveFontColor) }
-    var customInactiveColorInput by remember { mutableStateOf(lyricsOtherFontColor) }
 
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         Row(
@@ -240,171 +545,62 @@ fun LyricsSettingsScreen(
             SettingsSectionTitle("Tata Letak dan Posisi")
             
             // Perataan Lirik
-            val alignmentLabels = listOf("LEFT" to "Kiri", "CENTER" to "Tengah", "RIGHT" to "Kanan")
-            ListItem(
-                headlineContent = { Text("Perataan Lirik", color = Color.White) },
-                trailingContent = {
-                    Box {
-                        Box(
-                            modifier = Modifier
-                                .width(120.dp)
-                                .background(CardSlate, RoundedCornerShape(8.dp))
-                                .clickable { showAlignmentDialog = true }
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = alignmentLabels.find { it.first == lyricsAlignment }?.second ?: "Tengah",
-                                    color = Color.White,
-                                    fontSize = 14.sp
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "Pilih",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                        
-                        if (showAlignmentDialog) {
-                            androidx.compose.ui.window.Popup(
-                                alignment = Alignment.TopStart,
-                                onDismissRequest = { showAlignmentDialog = false },
-                                properties = androidx.compose.ui.window.PopupProperties(focusable = true)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(120.dp)
-                                        .background(CardSlate, RoundedCornerShape(8.dp))
-                                        .padding(3.dp)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(3.dp)
-                                    ) {
-                                alignmentLabels.forEach { (value, label) ->
-                                    val isSelected = lyricsAlignment == value
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(
-                                                if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent,
-                                                RoundedCornerShape(6.dp)
-                                            )
-                                            .clickable { 
-                                                viewModel.setLyricsAlignment(value)
-                                                showAlignmentDialog = false
-                                            }
-                                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = label,
-                                            color = Color.White,
-                                            fontSize = 14.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                }
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "Perataan Lirik",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                val alignmentLabels = listOf("LEFT" to "Kiri", "CENTER" to "Tengah", "RIGHT" to "Kanan")
+                SegmentedPills(
+                    options = alignmentLabels,
+                    selected = lyricsAlignment,
+                    onSelect = { viewModel.setLyricsAlignment(it) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             // Posisi Lirik Aktif
-            val positionLabels = listOf("TOP" to "Atas", "CENTER" to "Tengah", "BOTTOM" to "Bawah")
-            ListItem(
-                headlineContent = { Text("Posisi Baris Aktif", color = Color.White) },
-                trailingContent = {
-                    Box {
-                        Box(
-                            modifier = Modifier
-                                .width(120.dp)
-                                .background(CardSlate, RoundedCornerShape(8.dp))
-                                .clickable { showPositionDialog = true }
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = positionLabels.find { it.first == lyricsActivePosition }?.second ?: "Tengah",
-                                    color = Color.White,
-                                    fontSize = 14.sp
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "Pilih",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                        
-                        if (showPositionDialog) {
-                            androidx.compose.ui.window.Popup(
-                                alignment = Alignment.TopStart,
-                                onDismissRequest = { showPositionDialog = false },
-                                properties = androidx.compose.ui.window.PopupProperties(focusable = true)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(120.dp)
-                                        .background(CardSlate, RoundedCornerShape(8.dp))
-                                        .padding(3.dp)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(3.dp)
-                                    ) {
-                                positionLabels.forEach { (value, label) ->
-                                    val isSelected = lyricsActivePosition == value
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .background(
-                                                if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent,
-                                                RoundedCornerShape(6.dp)
-                                            )
-                                            .clickable { 
-                                                viewModel.setLyricsActivePosition(value)
-                                                showPositionDialog = false
-                                            }
-                                            .padding(horizontal = 12.dp, vertical = 8.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = label,
-                                            color = Color.White,
-                                            fontSize = 14.sp
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                }
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
-            
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = "Posisi Baris Aktif",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                val positionLabels = listOf("TOP" to "Atas", "CENTER" to "Tengah", "BOTTOM" to "Bawah")
+                SegmentedPills(
+                    options = positionLabels,
+                    selected = lyricsActivePosition,
+                    onSelect = { viewModel.setLyricsActivePosition(it) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
             // Jarak Antar Baris (Item Spacing)
-            Text(
-                text = "Jarak Antar Baris: ${lyricsItemSpacing.roundToInt()}dp", 
-                color = Color.White, 
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Jarak Antar Baris", color = Color.White, fontSize = 14.sp)
+                Text(text = "${lyricsItemSpacing.roundToInt()} dp", color = EmeraldGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
             MinimalSlider(
                 value = lyricsItemSpacing,
                 onValueChange = { viewModel.setLyricsItemSpacing(it) },
@@ -415,11 +611,16 @@ fun LyricsSettingsScreen(
             )
 
             // Margin Horizontal
-            Text(
-                text = "Margin Horizontal: ${lyricsMargin.roundToInt()}dp", 
-                color = Color.White, 
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Margin Horizontal", color = Color.White, fontSize = 14.sp)
+                Text(text = "${lyricsMargin.roundToInt()} dp", color = EmeraldGreen, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
             MinimalSlider(
                 value = lyricsMargin,
                 onValueChange = { viewModel.setLyricsMargin(it) },
@@ -428,13 +629,23 @@ fun LyricsSettingsScreen(
                 inactiveColor = CardSlate,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
-            
+
             // Batas Baris Lirik
-            Text(
-                text = if (lyricsContextLines > 5) "Lirik Di Tampilkan: Tampilkan Semua" else "Lirik Di Tampilkan: $lyricsContextLines baris sebelum dan sesudah", 
-                color = Color.White, 
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Batas Baris Lirik", color = Color.White, fontSize = 14.sp)
+                Text(
+                    text = if (lyricsContextLines > 5) "Semua Baris" else "$lyricsContextLines Baris",
+                    color = EmeraldGreen,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+            }
             MinimalSlider(
                 value = lyricsContextLines.toFloat(),
                 onValueChange = { viewModel.setLyricsContextLines(it.roundToInt()) },
@@ -443,7 +654,7 @@ fun LyricsSettingsScreen(
                 inactiveColor = CardSlate,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
-            
+
             HorizontalDivider(color = DividerSlate, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
 
             // ==========================================
@@ -685,7 +896,6 @@ fun LyricsSettingsScreen(
                                 .size(48.dp)
                                 .background(if (isSelected) activeColor else CardSlate, RoundedCornerShape(24.dp))
                                 .clickable { 
-                                    customActiveColorInput = lyricsActiveFontColor
                                     showActiveColorDialog = true 
                                 }
                                 .then(if (isSelected) Modifier.background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp)) else Modifier),
@@ -733,7 +943,6 @@ fun LyricsSettingsScreen(
                                 .size(48.dp)
                                 .background(if (isSelected) inactiveColor else CardSlate, RoundedCornerShape(24.dp))
                                 .clickable { 
-                                    customInactiveColorInput = lyricsOtherFontColor
                                     showInactiveColorDialog = true 
                                 }
                                 .then(if (isSelected) Modifier.background(Color.White.copy(alpha = 0.3f), RoundedCornerShape(24.dp)) else Modifier),
@@ -751,327 +960,51 @@ fun LyricsSettingsScreen(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 if (showActiveColorDialog) {
-                    var hue by remember { mutableFloatStateOf(0f) }
-                    var saturation by remember { mutableFloatStateOf(1f) }
-                    var brightness by remember { mutableFloatStateOf(1f) }
-                    var alpha by remember { mutableFloatStateOf(1f) }
-                    
-                    LaunchedEffect(customActiveColorInput) {
-                        try {
-                            val colorStr = if (customActiveColorInput.length == 7) customActiveColorInput.replace("#", "#FF") else customActiveColorInput
-                            val colorInt = android.graphics.Color.parseColor(colorStr)
-                            val hsv = FloatArray(3)
-                            android.graphics.Color.colorToHSV(colorInt, hsv)
-                            hue = hsv[0]
-                            saturation = hsv[1]
-                            brightness = hsv[2]
-                            alpha = android.graphics.Color.alpha(colorInt) / 255f
-                        } catch (e: Exception) {}
-                    }
-                    
-                    AlertDialog(
-                        onDismissRequest = { showActiveColorDialog = false },
-                        title = { Text("Warna Baris Aktif", color = Color.White) },
-                        text = {
-                            Column {
-                                Text("Hue (Warna)", color = Color.White, fontSize = 12.sp)
-                                HueSlider(
-                                    hue = hue,
-                                    onHueChange = { newHue ->
-                                        hue = newHue
-                                        val colorInt = android.graphics.Color.HSVToColor((alpha * 255).toInt(), floatArrayOf(hue, saturation, brightness))
-                                        customActiveColorInput = String.format("#%08X", colorInt)
-                                    }
-                                )
-                                Text("Saturasi", color = Color.White, fontSize = 12.sp)
-                                SaturationSlider(
-                                    hue = hue,
-                                    saturation = saturation,
-                                    value = brightness,
-                                    onSaturationChange = { newSat ->
-                                        saturation = newSat
-                                        val colorInt = android.graphics.Color.HSVToColor((alpha * 255).toInt(), floatArrayOf(hue, saturation, brightness))
-                                        customActiveColorInput = String.format("#%08X", colorInt)
-                                    }
-                                )
-                                Text("Kecerahan", color = Color.White, fontSize = 12.sp)
-                                ValueSlider(
-                                    hue = hue,
-                                    saturation = saturation,
-                                    value = brightness,
-                                    onValueChange = { newVal ->
-                                        brightness = newVal
-                                        val colorInt = android.graphics.Color.HSVToColor((alpha * 255).toInt(), floatArrayOf(hue, saturation, brightness))
-                                        customActiveColorInput = String.format("#%08X", colorInt)
-                                    }
-                                )
-                                Text("Transparansi (Alpha)", color = Color.White, fontSize = 12.sp)
-                                val previewColorBase = try { Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, brightness))) } catch(e:Exception) { Color.White }
-                                AlphaSlider(
-                                    color = previewColorBase,
-                                    alpha = alpha,
-                                    onAlphaChange = { newAlpha ->
-                                        alpha = newAlpha
-                                        val colorInt = android.graphics.Color.HSVToColor((alpha * 255).toInt(), floatArrayOf(hue, saturation, brightness))
-                                        customActiveColorInput = String.format("#%08X", colorInt)
-                                    }
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Atau masukkan kode HEX manual", color = TextSecondary, fontSize = 14.sp)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                OutlinedTextField(
-                                    value = customActiveColorInput,
-                                    onValueChange = { customActiveColorInput = it.uppercase() },
-                                    label = { Text("Kode HEX", color = TextSecondary) },
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedTextColor = Color.White,
-                                        unfocusedTextColor = Color.White,
-                                        focusedBorderColor = EmeraldGreen,
-                                        unfocusedBorderColor = CardSlate
-                                    ),
-                                    singleLine = true
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                // Preview
-                                val previewColor = try { Color(android.graphics.Color.parseColor(customActiveColorInput)) } catch (e: Exception) { Color.Transparent }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp)
-                                        .background(previewColor, RoundedCornerShape(8.dp))
-                                        .background(if (previewColor == Color.Transparent) CardSlate else Color.Transparent, RoundedCornerShape(8.dp))
-                                ) {
-                                    if (previewColor == Color.Transparent) {
-                                        Text("Kode warna tidak valid", color = Color.White, modifier = Modifier.align(Alignment.Center))
-                                    }
-                                }
-                            }
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = {
-                                    try {
-                                        android.graphics.Color.parseColor(customActiveColorInput)
-                                        viewModel.setLyricsActiveFontColor(customActiveColorInput)
-                                        showActiveColorDialog = false
-                                    } catch (e: Exception) {
-                                        // Invalid color
-                                    }
-                                }
-                            ) {
-                                Text("Terapkan", color = EmeraldGreen)
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showActiveColorDialog = false }) {
-                                Text("Batal", color = TextSecondary)
-                            }
-                        },
-                        containerColor = CardSlate
+                    LyricsColorPickerDialog(
+                        title = "Warna Baris Aktif",
+                        initialColorHex = lyricsActiveFontColor,
+                        onDismiss = { showActiveColorDialog = false },
+                        onConfirm = {
+                            viewModel.setLyricsActiveFontColor(it)
+                            showActiveColorDialog = false
+                        }
                     )
                 }
                 
                 if (showInactiveColorDialog) {
-                    var hue by remember { mutableFloatStateOf(0f) }
-                    var saturation by remember { mutableFloatStateOf(1f) }
-                    var brightness by remember { mutableFloatStateOf(1f) }
-                    var alpha by remember { mutableFloatStateOf(1f) }
-                    
-                    LaunchedEffect(customInactiveColorInput) {
-                        try {
-                            val colorStr = if (customInactiveColorInput.length == 7) customInactiveColorInput.replace("#", "#FF") else customInactiveColorInput
-                            val colorInt = android.graphics.Color.parseColor(colorStr)
-                            val hsv = FloatArray(3)
-                            android.graphics.Color.colorToHSV(colorInt, hsv)
-                            hue = hsv[0]
-                            saturation = hsv[1]
-                            brightness = hsv[2]
-                            alpha = android.graphics.Color.alpha(colorInt) / 255f
-                        } catch (e: Exception) {}
-                    }
-
-                    AlertDialog(
-                        onDismissRequest = { showInactiveColorDialog = false },
-                        title = { Text("Warna Baris Tidak Aktif", color = Color.White) },
-                        text = {
-                            Column {
-                                Text("Hue (Warna)", color = Color.White, fontSize = 12.sp)
-                                HueSlider(
-                                    hue = hue,
-                                    onHueChange = { newHue ->
-                                        hue = newHue
-                                        val colorInt = android.graphics.Color.HSVToColor((alpha * 255).toInt(), floatArrayOf(hue, saturation, brightness))
-                                        customInactiveColorInput = String.format("#%08X", colorInt)
-                                    }
-                                )
-                                Text("Saturasi", color = Color.White, fontSize = 12.sp)
-                                SaturationSlider(
-                                    hue = hue,
-                                    saturation = saturation,
-                                    value = brightness,
-                                    onSaturationChange = { newSat ->
-                                        saturation = newSat
-                                        val colorInt = android.graphics.Color.HSVToColor((alpha * 255).toInt(), floatArrayOf(hue, saturation, brightness))
-                                        customInactiveColorInput = String.format("#%08X", colorInt)
-                                    }
-                                )
-                                Text("Kecerahan", color = Color.White, fontSize = 12.sp)
-                                ValueSlider(
-                                    hue = hue,
-                                    saturation = saturation,
-                                    value = brightness,
-                                    onValueChange = { newVal ->
-                                        brightness = newVal
-                                        val colorInt = android.graphics.Color.HSVToColor((alpha * 255).toInt(), floatArrayOf(hue, saturation, brightness))
-                                        customInactiveColorInput = String.format("#%08X", colorInt)
-                                    }
-                                )
-                                Text("Transparansi (Alpha)", color = Color.White, fontSize = 12.sp)
-                                val previewColorBase = try { Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, saturation, brightness))) } catch(e:Exception) { Color.White }
-                                AlphaSlider(
-                                    color = previewColorBase,
-                                    alpha = alpha,
-                                    onAlphaChange = { newAlpha ->
-                                        alpha = newAlpha
-                                        val colorInt = android.graphics.Color.HSVToColor((alpha * 255).toInt(), floatArrayOf(hue, saturation, brightness))
-                                        customInactiveColorInput = String.format("#%08X", colorInt)
-                                    }
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text("Atau masukkan kode HEX manual", color = TextSecondary, fontSize = 14.sp)
-                                Spacer(modifier = Modifier.height(8.dp))
-                                OutlinedTextField(
-                                    value = customInactiveColorInput,
-                                    onValueChange = { customInactiveColorInput = it.uppercase() },
-                                    label = { Text("Kode HEX", color = TextSecondary) },
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedTextColor = Color.White,
-                                        unfocusedTextColor = Color.White,
-                                        focusedBorderColor = EmeraldGreen,
-                                        unfocusedBorderColor = CardSlate
-                                    ),
-                                    singleLine = true
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                // Preview
-                                val previewColor = try { Color(android.graphics.Color.parseColor(customInactiveColorInput)) } catch (e: Exception) { Color.Transparent }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp)
-                                        .background(previewColor, RoundedCornerShape(8.dp))
-                                        .background(if (previewColor == Color.Transparent) CardSlate else Color.Transparent, RoundedCornerShape(8.dp))
-                                ) {
-                                    if (previewColor == Color.Transparent) {
-                                        Text("Kode warna tidak valid", color = Color.White, modifier = Modifier.align(Alignment.Center))
-                                    }
-                                }
-                            }
-                        },
-                        confirmButton = {
-                            TextButton(
-                                onClick = {
-                                    try {
-                                        android.graphics.Color.parseColor(customInactiveColorInput)
-                                        viewModel.setLyricsOtherFontColor(customInactiveColorInput)
-                                        showInactiveColorDialog = false
-                                    } catch (e: Exception) {
-                                        // Invalid color
-                                    }
-                                }
-                            ) {
-                                Text("Terapkan", color = EmeraldGreen)
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = { showInactiveColorDialog = false }) {
-                                Text("Batal", color = TextSecondary)
-                            }
-                        },
-                        containerColor = CardSlate
+                    LyricsColorPickerDialog(
+                        title = "Warna Baris Tidak Aktif",
+                        initialColorHex = lyricsOtherFontColor,
+                        onDismiss = { showInactiveColorDialog = false },
+                        onConfirm = {
+                            viewModel.setLyricsOtherFontColor(it)
+                            showInactiveColorDialog = false
+                        }
                     )
                 }
             }
 
             // Efek Memudar (Fade Effect)
-            val fadeLabels = listOf("SMOOTH" to "Halus", "SHARP" to "Tajam", "NONE" to "Mati")
-            ListItem(
-                headlineContent = { Text("Efek Memudar", color = Color.White) },
-                trailingContent = {
-                    Box {
-                        Box(
-                            modifier = Modifier
-                                .width(120.dp)
-                                .background(CardSlate, RoundedCornerShape(8.dp))
-                                .clickable { showFadeDialog = true }
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = fadeLabels.find { it.first == lyricsFadeEffect }?.second ?: "Halus",
-                                    color = Color.White,
-                                    fontSize = 14.sp
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "Pilih",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-                        
-                        if (showFadeDialog) {
-                            androidx.compose.ui.window.Popup(
-                                alignment = Alignment.TopStart,
-                                onDismissRequest = { showFadeDialog = false },
-                                properties = androidx.compose.ui.window.PopupProperties(focusable = true)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(120.dp)
-                                        .background(CardSlate, RoundedCornerShape(8.dp))
-                                        .padding(3.dp)
-                                ) {
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(3.dp)
-                                    ) {
-                                        fadeLabels.forEach { (value, label) ->
-                                            val isSelected = lyricsFadeEffect == value
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .background(
-                                                        if (isSelected) Color.White.copy(alpha = 0.15f) else Color.Transparent,
-                                                        RoundedCornerShape(6.dp)
-                                                    )
-                                                    .clickable { 
-                                                        viewModel.setLyricsFadeEffect(value)
-                                                        showFadeDialog = false
-                                                    }
-                                                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    text = label,
-                                                    color = Color.White,
-                                                    fontSize = 14.sp
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    "Efek Memudar (Fade Effect)",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+                val fadeLabels = listOf("SMOOTH" to "Halus", "SHARP" to "Tajam", "NONE" to "Mati")
+                SegmentedPills(
+                    options = fadeLabels,
+                    selected = lyricsFadeEffect,
+                    onSelect = { viewModel.setLyricsFadeEffect(it) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             
             Spacer(modifier = Modifier.height(32.dp))
         }

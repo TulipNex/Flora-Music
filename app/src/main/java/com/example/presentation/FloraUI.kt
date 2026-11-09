@@ -130,7 +130,7 @@ fun Modifier.bounceClick(
 
 // Screen navigation enum
 enum class FloraScreen {
-    HOME, SONGS, PLAYLISTS, ALBUMS, ARTISTS, SEARCH, SETTINGS, TAB_SETTINGS, LYRICS_SETTINGS
+    HOME, SONGS, PLAYLISTS, ALBUMS, ARTISTS, SEARCH, SETTINGS, TAB_SETTINGS, LYRICS_SETTINGS, SONG_LIMIT_SETTINGS
 }
 
 // Sealed hierarchy for type-safe router states
@@ -233,6 +233,7 @@ fun FloraMainScreen(viewModel: MusicViewModel) {
             activeAlbumName != null -> activeAlbumName = null
             activeArtistName != null -> activeArtistName = null
             activeGenreName != null -> activeGenreName = null
+            currentScreen in listOf(FloraScreen.TAB_SETTINGS, FloraScreen.LYRICS_SETTINGS, FloraScreen.SONG_LIMIT_SETTINGS) -> currentScreen = FloraScreen.SETTINGS
             currentScreen != FloraScreen.HOME -> currentScreen = FloraScreen.HOME
         }
     }
@@ -318,7 +319,7 @@ fun FloraMainScreen(viewModel: MusicViewModel) {
                     AnimatedContent(
                         targetState = currentScreen,
                         transitionSpec = {
-                            val pushScreens = listOf(FloraScreen.SONGS, FloraScreen.SEARCH, FloraScreen.SETTINGS, FloraScreen.TAB_SETTINGS)
+                            val pushScreens = listOf(FloraScreen.SONGS, FloraScreen.SEARCH, FloraScreen.SETTINGS, FloraScreen.TAB_SETTINGS, FloraScreen.LYRICS_SETTINGS, FloraScreen.SONG_LIMIT_SETTINGS)
                             val isPushing = targetState in pushScreens && initialState == FloraScreen.HOME
                             val isPopping = initialState in pushScreens && targetState == FloraScreen.HOME
 
@@ -391,6 +392,10 @@ fun FloraMainScreen(viewModel: MusicViewModel) {
                                 onBackClick = { currentScreen = FloraScreen.SETTINGS }
                             )
                             FloraScreen.LYRICS_SETTINGS -> LyricsSettingsScreen(
+                                viewModel = viewModel,
+                                onBackClick = { currentScreen = FloraScreen.SETTINGS }
+                            )
+                            FloraScreen.SONG_LIMIT_SETTINGS -> SongLimitSettingsScreen(
                                 viewModel = viewModel,
                                 onBackClick = { currentScreen = FloraScreen.SETTINGS }
                             )
@@ -3767,15 +3772,7 @@ fun SettingsScreen(
     }
 
     val isGridView by viewModel.isGridView.collectAsState()
-    val historyLimit by viewModel.historyLimit.collectAsState()
-    val mostPlayedLimit by viewModel.mostPlayedLimit.collectAsState()
-    val recentlyAddedValue by viewModel.recentlyAddedValue.collectAsState()
-    val recentlyAddedUnit by viewModel.recentlyAddedUnit.collectAsState()
-
     var showFolderBlacklistDialog by remember { mutableStateOf(false) }
-    var showHistoryLimitDialog by remember { mutableStateOf(false) }
-    var showMostPlayedLimitDialog by remember { mutableStateOf(false) }
-    var showRecentlyAddedRangeDialog by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         // Header
@@ -3819,62 +3816,15 @@ fun SettingsScreen(
                     modifier = Modifier.clickable { onNavigate(FloraScreen.TAB_SETTINGS) },
                     headlineContent = { Text("Tab Beranda", color = Color.White) },
                     supportingContent = { Text("Atur urutan dan visibilitas tab", color = TextSecondary) },
-                    trailingContent = { Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.White) },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Batas Tampilan Lagu",
-                    color = EmeraldGreen,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 4.dp)
-                )
-
-                ListItem(
-                    modifier = Modifier.clickable { showHistoryLimitDialog = true },
-                    headlineContent = { Text("Batas Lagu Riwayat", color = Color.White) },
-                    supportingContent = { Text("Jumlah maksimal lagu yang tampil di riwayat", color = TextSecondary) },
-                    trailingContent = {
-                        Text(
-                            text = if (historyLimit <= 0) "Tanpa Batas" else "$historyLimit Lagu",
-                            color = EmeraldGreen,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                    },
+                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = TextSecondary) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
 
                 ListItem(
-                    modifier = Modifier.clickable { showMostPlayedLimitDialog = true },
-                    headlineContent = { Text("Batas Lagu Teratas", color = Color.White) },
-                    supportingContent = { Text("Jumlah maksimal lagu terpopuler yang tampil", color = TextSecondary) },
-                    trailingContent = {
-                        Text(
-                            text = if (mostPlayedLimit <= 0) "Tanpa Batas" else "$mostPlayedLimit Lagu",
-                            color = EmeraldGreen,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                    },
-                    colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                )
-
-                ListItem(
-                    modifier = Modifier.clickable { showRecentlyAddedRangeDialog = true },
-                    headlineContent = { Text("Rentang Waktu Lagu Terbaru", color = Color.White) },
-                    supportingContent = { Text("Hanya tampilkan lagu dalam rentang waktu ini", color = TextSecondary) },
-                    trailingContent = {
-                        Text(
-                            text = "$recentlyAddedValue $recentlyAddedUnit",
-                            color = EmeraldGreen,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
-                        )
-                    },
+                    modifier = Modifier.clickable { onNavigate(FloraScreen.SONG_LIMIT_SETTINGS) },
+                    headlineContent = { Text("Batas Lagu", color = Color.White) },
+                    supportingContent = { Text("Batas lagu riwayat, teratas, dan rentang terbaru", color = TextSecondary) },
+                    trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = TextSecondary) },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                 )
 
@@ -3950,183 +3900,6 @@ fun SettingsScreen(
         FolderBlacklistDialog(
             viewModel = viewModel,
             onDismiss = { showFolderBlacklistDialog = false }
-        )
-    }
-
-    if (showHistoryLimitDialog) {
-        var tempInput by remember { mutableStateOf(if (historyLimit == 0) "0" else historyLimit.toString()) }
-        AlertDialog(
-            onDismissRequest = { showHistoryLimitDialog = false },
-            containerColor = CardSlate,
-            title = { Text("Batas Lagu Riwayat", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text(
-                        "Tentukan jumlah maksimal lagu yang disimpan dan ditampilkan pada tab Riwayat. Masukkan 0 untuk tanpa batas.",
-                        color = TextSecondary,
-                        fontSize = 13.sp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = tempInput,
-                        onValueChange = { if (it.all { char -> char.isDigit() }) tempInput = it },
-                        label = { Text("Jumlah Lagu (0 = Tanpa Batas)", color = TextSecondary) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = EmeraldGreen,
-                            unfocusedBorderColor = TextSecondary,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val num = tempInput.toIntOrNull() ?: 50
-                        viewModel.setHistoryLimit(num)
-                        showHistoryLimitDialog = false
-                    }
-                ) {
-                    Text("Simpan", color = EmeraldGreen, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showHistoryLimitDialog = false }) {
-                    Text("Batal", color = TextSecondary)
-                }
-            }
-        )
-    }
-
-    if (showMostPlayedLimitDialog) {
-        var tempInput by remember { mutableStateOf(if (mostPlayedLimit == 0) "0" else mostPlayedLimit.toString()) }
-        AlertDialog(
-            onDismissRequest = { showMostPlayedLimitDialog = false },
-            containerColor = CardSlate,
-            title = { Text("Batas Lagu Teratas", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text(
-                        "Tentukan jumlah maksimal lagu terpopuler yang ditampilkan pada tab Teratas. Masukkan 0 untuk tanpa batas.",
-                        color = TextSecondary,
-                        fontSize = 13.sp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = tempInput,
-                        onValueChange = { if (it.all { char -> char.isDigit() }) tempInput = it },
-                        label = { Text("Jumlah Lagu (0 = Tanpa Batas)", color = TextSecondary) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = EmeraldGreen,
-                            unfocusedBorderColor = TextSecondary,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val num = tempInput.toIntOrNull() ?: 50
-                        viewModel.setMostPlayedLimit(num)
-                        showMostPlayedLimitDialog = false
-                    }
-                ) {
-                    Text("Simpan", color = EmeraldGreen, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showMostPlayedLimitDialog = false }) {
-                    Text("Batal", color = TextSecondary)
-                }
-            }
-        )
-    }
-
-    if (showRecentlyAddedRangeDialog) {
-        var tempValue by remember { mutableStateOf(recentlyAddedValue.toString()) }
-        var tempUnit by remember { mutableStateOf(recentlyAddedUnit) }
-        val units = listOf("Hari", "Minggu", "Bulan", "Tahun")
-
-        AlertDialog(
-            onDismissRequest = { showRecentlyAddedRangeDialog = false },
-            containerColor = CardSlate,
-            title = { Text("Rentang Waktu Lagu Terbaru", color = Color.White, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text(
-                        "Hanya lagu yang ditambahkan dalam rentang waktu ini yang akan masuk ke tab Terbaru.",
-                        color = TextSecondary,
-                        fontSize = 13.sp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = tempValue,
-                        onValueChange = { if (it.all { char -> char.isDigit() }) tempValue = it },
-                        label = { Text("Angka", color = TextSecondary) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = EmeraldGreen,
-                            unfocusedBorderColor = TextSecondary,
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("Parameter Waktu:", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        units.forEach { unit ->
-                            val isSelected = tempUnit == unit
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isSelected) EmeraldGreen else SurfaceSlate)
-                                    .clickable { tempUnit = unit }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = unit,
-                                    fontSize = 12.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) Color.Black else Color.White
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val num = tempValue.toIntOrNull()?.coerceAtLeast(1) ?: 1
-                        viewModel.setRecentlyAddedRange(num, tempUnit)
-                        showRecentlyAddedRangeDialog = false
-                    }
-                ) {
-                    Text("Simpan", color = EmeraldGreen, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRecentlyAddedRangeDialog = false }) {
-                    Text("Batal", color = TextSecondary)
-                }
-            }
         )
     }
 }
